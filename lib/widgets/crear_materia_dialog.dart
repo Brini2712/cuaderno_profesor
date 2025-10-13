@@ -1,14 +1,10 @@
 import 'package:flutter/material.dart';
 import '../models/materia.dart';
-import 'package:uuid/uuid.dart';
 
 class CrearMateriaDialog extends StatefulWidget {
   final Function(Materia) onCrear;
 
-  const CrearMateriaDialog({
-    super.key,
-    required this.onCrear,
-  });
+  const CrearMateriaDialog({super.key, required this.onCrear});
 
   @override
   State<CrearMateriaDialog> createState() => _CrearMateriaDialogState();
@@ -18,9 +14,9 @@ class _CrearMateriaDialogState extends State<CrearMateriaDialog> {
   final _formKey = GlobalKey<FormState>();
   final _nombreController = TextEditingController();
   final _descripcionController = TextEditingController();
-  
+
   String _colorSeleccionado = '#2196F3';
-  
+
   final List<String> _coloresDisponibles = [
     '#2196F3', // Azul
     '#4CAF50', // Verde
@@ -81,9 +77,7 @@ class _CrearMateriaDialogState extends State<CrearMateriaDialog> {
             const SizedBox(height: 16),
             const Text(
               'Selecciona un color:',
-              style: TextStyle(
-                fontWeight: FontWeight.w500,
-              ),
+              style: TextStyle(fontWeight: FontWeight.w500),
             ),
             const SizedBox(height: 8),
             Wrap(
@@ -103,19 +97,15 @@ class _CrearMateriaDialogState extends State<CrearMateriaDialog> {
                       color: Color(int.parse(color.replaceAll('#', '0xFF'))),
                       shape: BoxShape.circle,
                       border: Border.all(
-                        color: _colorSeleccionado == color 
-                          ? Colors.black 
-                          : Colors.transparent,
+                        color: _colorSeleccionado == color
+                            ? Colors.black
+                            : Colors.transparent,
                         width: 3,
                       ),
                     ),
                     child: _colorSeleccionado == color
-                      ? const Icon(
-                          Icons.check,
-                          color: Colors.white,
-                          size: 20,
-                        )
-                      : null,
+                        ? const Icon(Icons.check, color: Colors.white, size: 20)
+                        : null,
                   ),
                 );
               }).toList(),
@@ -128,10 +118,7 @@ class _CrearMateriaDialogState extends State<CrearMateriaDialog> {
           onPressed: () => Navigator.of(context).pop(),
           child: const Text('Cancelar'),
         ),
-        ElevatedButton(
-          onPressed: _crearMateria,
-          child: const Text('Crear'),
-        ),
+        ElevatedButton(onPressed: _crearMateria, child: const Text('Crear')),
       ],
     );
   }
@@ -139,7 +126,7 @@ class _CrearMateriaDialogState extends State<CrearMateriaDialog> {
   void _crearMateria() {
     if (_formKey.currentState?.validate() ?? false) {
       final codigoAcceso = _generarCodigoAcceso();
-      
+
       final materia = Materia(
         id: '', // Se asignará en el provider
         nombre: _nombreController.text.trim(),
@@ -160,11 +147,11 @@ class _CrearMateriaDialogState extends State<CrearMateriaDialog> {
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
     final random = DateTime.now().millisecondsSinceEpoch;
     String codigo = '';
-    
+
     for (int i = 0; i < 6; i++) {
       codigo += chars[(random + i) % chars.length];
     }
-    
+
     return codigo;
   }
 }
