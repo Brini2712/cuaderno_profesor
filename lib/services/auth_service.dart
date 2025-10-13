@@ -7,7 +7,7 @@ class AuthService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
   User? get currentUser => _auth.currentUser;
-  
+
   Stream<User?> get authStateChanges => _auth.authStateChanges();
 
   // Registrar usuario
@@ -22,7 +22,7 @@ class AuthService {
         email: email,
         password: password,
       );
-      
+
       User? user = result.user;
       if (user != null) {
         // Crear documento de usuario en Firestore
@@ -33,8 +33,11 @@ class AuthService {
           tipo: tipo,
           fechaCreacion: DateTime.now(),
         );
-        
-        await _firestore.collection('usuarios').doc(user.uid).set(nuevoUsuario.toMap());
+
+        await _firestore
+            .collection('usuarios')
+            .doc(user.uid)
+            .set(nuevoUsuario.toMap());
         return nuevoUsuario;
       }
       return null;
@@ -54,12 +57,29 @@ class AuthService {
         email: email,
         password: password,
       );
-      
+
       User? user = result.user;
       if (user != null) {
-        DocumentSnapshot doc = await _firestore.collection('usuarios').doc(user.uid).get();
-        if (doc.exists) {
-          return Usuario.fromMap(doc.data() as Map<String, dynamic>);
+        // Intentar obtener el perfil; si Firestore está offline, continuar con Auth
+        try {
+          DocumentSnapshot<Map<String, dynamic>> doc = await _firestore
+              .collection('usuarios')
+              .doc(user.uid)
+              .get(const GetOptions(source: Source.serverAndCache));
+          if (doc.exists && doc.data() != null) {
+            return Usuario.fromMap(doc.data()!);
+          }
+        } catch (e) {
+          // Registrar pero no bloquear el inicio de sesión
+          // En modo offline, devolvemos un Usuario mínimo basado en Auth
+          return Usuario(
+            id: user.uid,
+            nombre: user.displayName ?? user.email ?? 'Usuario',
+            email: user.email ?? '',
+            tipo: TipoUsuario
+                .profesor, // Asumir profesor por defecto; se corrige luego
+            fechaCreacion: DateTime.now(),
+          );
         }
       }
       return null;
@@ -73,7 +93,10 @@ class AuthService {
   Future<Usuario?> getCurrentUserData() async {
     User? user = currentUser;
     if (user != null) {
-      DocumentSnapshot doc = await _firestore.collection('usuarios').doc(user.uid).get();
+      DocumentSnapshot doc = await _firestore
+          .collection('usuarios')
+          .doc(user.uid)
+          .get();
       if (doc.exists) {
         return Usuario.fromMap(doc.data() as Map<String, dynamic>);
       }

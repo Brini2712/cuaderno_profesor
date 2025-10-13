@@ -62,7 +62,9 @@ class _LoginScreenState extends State<LoginScreen> {
                         Container(
                           padding: const EdgeInsets.all(16),
                           decoration: BoxDecoration(
-                            color: const Color(0xFF1976D2).withValues(alpha: 0.1),
+                            color: const Color(
+                              0xFF1976D2,
+                            ).withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(12),
                           ),
                           child: const Icon(
@@ -74,19 +76,19 @@ class _LoginScreenState extends State<LoginScreen> {
                         const SizedBox(height: 16),
                         Text(
                           'Cuaderno Profesor',
-                          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                            fontWeight: FontWeight.bold,
-                            color: const Color(0xFF1976D2),
-                          ),
+                          style: Theme.of(context).textTheme.headlineSmall
+                              ?.copyWith(
+                                fontWeight: FontWeight.bold,
+                                color: const Color(0xFF1976D2),
+                              ),
                         ),
                         const SizedBox(height: 8),
                         Text(
-                          _isLogin 
-                            ? 'Inicia sesión para continuar'
-                            : 'Crea tu cuenta nueva',
-                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: Colors.grey[600],
-                          ),
+                          _isLogin
+                              ? 'Inicia sesión para continuar'
+                              : 'Crea tu cuenta nueva',
+                          style: Theme.of(context).textTheme.bodyMedium
+                              ?.copyWith(color: Colors.grey[600]),
                         ),
                         const SizedBox(height: 32),
 
@@ -171,7 +173,9 @@ class _LoginScreenState extends State<LoginScreen> {
                             if (value == null || value.isEmpty) {
                               return 'Por favor ingresa tu email';
                             }
-                            if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value)) {
+                            if (!RegExp(
+                              r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$',
+                            ).hasMatch(value)) {
                               return 'Ingresa un email válido';
                             }
                             return null;
@@ -187,7 +191,9 @@ class _LoginScreenState extends State<LoginScreen> {
                             prefixIcon: const Icon(Icons.lock),
                             suffixIcon: IconButton(
                               icon: Icon(
-                                _obscurePassword ? Icons.visibility : Icons.visibility_off,
+                                _obscurePassword
+                                    ? Icons.visibility
+                                    : Icons.visibility_off,
                               ),
                               onPressed: () {
                                 setState(() {
@@ -218,7 +224,9 @@ class _LoginScreenState extends State<LoginScreen> {
                               width: double.infinity,
                               height: 48,
                               child: ElevatedButton(
-                                onPressed: provider.isLoading ? null : () => _submitForm(provider),
+                                onPressed: provider.isLoading
+                                    ? null
+                                    : () => _submitForm(provider),
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: const Color(0xFF1976D2),
                                   foregroundColor: Colors.white,
@@ -227,21 +235,26 @@ class _LoginScreenState extends State<LoginScreen> {
                                   ),
                                 ),
                                 child: provider.isLoading
-                                  ? const SizedBox(
-                                      height: 20,
-                                      width: 20,
-                                      child: CircularProgressIndicator(
-                                        strokeWidth: 2,
-                                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                    ? const SizedBox(
+                                        height: 20,
+                                        width: 20,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                          valueColor:
+                                              AlwaysStoppedAnimation<Color>(
+                                                Colors.white,
+                                              ),
+                                        ),
+                                      )
+                                    : Text(
+                                        _isLogin
+                                            ? 'Iniciar Sesión'
+                                            : 'Crear Cuenta',
+                                        style: const TextStyle(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.bold,
+                                        ),
                                       ),
-                                    )
-                                  : Text(
-                                      _isLogin ? 'Iniciar Sesión' : 'Crear Cuenta',
-                                      style: const TextStyle(
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
                               ),
                             );
                           },
@@ -256,12 +269,10 @@ class _LoginScreenState extends State<LoginScreen> {
                             });
                           },
                           child: Text(
-                            _isLogin 
-                              ? '¿No tienes cuenta? Regístrate'
-                              : '¿Ya tienes cuenta? Inicia sesión',
-                            style: const TextStyle(
-                              color: Color(0xFF1976D2),
-                            ),
+                            _isLogin
+                                ? '¿No tienes cuenta? Regístrate'
+                                : '¿Ya tienes cuenta? Inicia sesión',
+                            style: const TextStyle(color: Color(0xFF1976D2)),
                           ),
                         ),
 
@@ -272,9 +283,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             },
                             child: const Text(
                               '¿Olvidaste tu contraseña?',
-                              style: TextStyle(
-                                color: Colors.grey,
-                              ),
+                              style: TextStyle(color: Colors.grey),
                             ),
                           ),
                         ],
@@ -293,7 +302,6 @@ class _LoginScreenState extends State<LoginScreen> {
   Future<void> _submitForm(CuadernoProvider provider) async {
     if (_formKey.currentState?.validate() ?? false) {
       bool success;
-      
       if (_isLogin) {
         success = await provider.iniciarSesion(
           _emailController.text.trim(),
@@ -310,18 +318,31 @@ class _LoginScreenState extends State<LoginScreen> {
 
       if (mounted) {
         if (success) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                _isLogin
+                    ? '¡Inicio de sesión exitoso!'
+                    : '¡Cuenta creada exitosamente!',
+              ),
+              backgroundColor: Colors.green,
+            ),
+          );
           // Navegar según el tipo de usuario
-          if (provider.usuario?.tipo == TipoUsuario.profesor) {
-            context.go('/profesor');
-          } else {
-            context.go('/alumno');
-          }
+          Future.delayed(const Duration(milliseconds: 500), () {
+            if (provider.usuario?.tipo == TipoUsuario.profesor) {
+              context.go('/profesor');
+            } else {
+              context.go('/alumno');
+            }
+          });
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(_isLogin 
-                ? 'Error al iniciar sesión. Verifica tus credenciales.'
-                : 'Error al crear la cuenta. Intenta nuevamente.'
+              content: Text(
+                _isLogin
+                    ? 'Error al iniciar sesión. Verifica tus credenciales.'
+                    : 'Error al crear la cuenta. Intenta nuevamente.',
               ),
               backgroundColor: Colors.red,
             ),
