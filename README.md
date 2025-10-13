@@ -16,8 +16,16 @@ Aplicación móvil/web tipo Classroom para profesores y alumnos: registro de usu
 	- Inicia sesión: `firebase login`
 	- Vincula el proyecto: `flutterfire configure`
 	- Esto generará `lib/firebase_options.dart` con la configuración de tu proyecto.
-4. Activa Firestore Database en la consola de Firebase.
-5. Reglas de Firestore (solo para desarrollo):
+4. Crea la base de datos Firestore:
+	- Ve a la [Consola de Firebase](https://console.firebase.google.com/).
+	- Selecciona tu proyecto y entra a "Firestore Database" en el menú lateral.
+	- Haz clic en "Crear base de datos" y selecciona el modo de prueba para desarrollo.
+	- Confirma y espera a que se cree la base de datos.
+5. Habilita la autenticación por email:
+	- En la consola de Firebase, ve a "Authentication" > "Método de acceso".
+	- Haz clic en "Correo electrónico/contraseña" y activa el interruptor.
+	- Guarda los cambios.
+6. Reglas de Firestore (solo para desarrollo):
 	```
 	service cloud.firestore {
 	  match /databases/{database}/documents {
@@ -27,7 +35,7 @@ Aplicación móvil/web tipo Classroom para profesores y alumnos: registro de usu
 	  }
 	}
 	```
-6. Ejecuta la app:
+7. Ejecuta la app:
 	- Web: `flutter run -d chrome`
 	- Android: `flutter run -d android`
 	- iOS/macOS/Windows según disponibilidad.
@@ -54,8 +62,27 @@ Aplicación móvil/web tipo Classroom para profesores y alumnos: registro de usu
 - Análisis estático: `flutter analyze`
 - Formateo: `dart format .`
 
-## Colaboradores
-Para usar otro proyecto Firebase, cada colaborador puede correr `flutterfire configure` con su propio proyecto; el resto del código permanece igual.
+## Colaboración y Firebase
+
+### Usar el mismo backend de Firebase
+Todos los colaboradores pueden usar el mismo backend de Firebase (autenticación y Firestore) si tienen acceso a la configuración del proyecto. Para desarrollo, se recomienda usar reglas abiertas y nunca compartir claves privadas en público.
+
+### Usar un proyecto de Firebase personal
+Si cada colaborador quiere hacer pruebas con su propio backend de Firebase:
+
+1. Crea un nuevo proyecto en [Firebase Console](https://console.firebase.google.com/).
+2. Agrega una app (Android/iOS/Web) y descarga la configuración correspondiente (`google-services.json`, `GoogleService-Info.plist`, etc).
+3. Usa el [FlutterFire CLI](https://firebase.flutter.dev/docs/cli/) para generar el archivo `lib/firebase_options.dart`:
+	```sh
+	flutterfire configure
+	```
+	Sigue los pasos y selecciona tu proyecto personal.
+4. Reemplaza los archivos de configuración en tu entorno local.
+5. Ajusta las reglas de Firestore/Auth para tus pruebas.
+
+> **Nota:** El código base es el mismo para todos. Solo cambia la configuración de Firebase.
+
+> **Tip:** Puedes cambiar de backend simplemente regenerando `firebase_options.dart` y actualizando los archivos de configuración.
 # cuaderno_profesor
 
 A new Flutter project.
