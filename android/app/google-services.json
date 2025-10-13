@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "861387070043",
+    "project_id": "cuaderno-profesor-d8800",
+    "storage_bucket": "cuaderno-profesor-d8800.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:861387070043:android:bfdefc1230c3bd49a1fd7e",
+        "android_client_info": {
+          "package_name": "com.example.cuaderno_profesor"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyApwfar6W2HyCcWop3aHRoaJnUN4AXKhbo"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

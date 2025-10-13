@@ -41,28 +41,28 @@ class DefaultFirebaseOptions {
   }
 
   static const FirebaseOptions web = FirebaseOptions(
-    apiKey: 'AIzaSyDemoKey1234567890',
-    appId: '1:123456789:web:abcdef123456',
-    messagingSenderId: '123456789',
-    projectId: 'cuaderno-profesor-demo',
-    authDomain: 'cuaderno-profesor-demo.firebaseapp.com',
-    storageBucket: 'cuaderno-profesor-demo.appspot.com',
+    apiKey: 'AIzaSyDQrQyjAzAth-gm_4PM9amQ8HAtrCmryBI',
+    appId: '1:861387070043:web:81037db6124bcb2ca1fd7e',
+    messagingSenderId: '861387070043',
+    projectId: 'cuaderno-profesor-d8800',
+    authDomain: 'cuaderno-profesor-d8800.firebaseapp.com',
+    storageBucket: 'cuaderno-profesor-d8800.appspot.com',
   );
 
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'AIzaSyDemoKey1234567890',
-    appId: '1:123456789:android:abcdef123456',
-    messagingSenderId: '123456789',
-    projectId: 'cuaderno-profesor-demo',
-    storageBucket: 'cuaderno-profesor-demo.appspot.com',
+    apiKey: 'AIzaSyApwfar6W2HyCcWop3aHRoaJnUN4AXKhbo',
+    appId: '1:861387070043:android:bfdefc1230c3bd49a1fd7e',
+    messagingSenderId: '861387070043',
+    projectId: 'cuaderno-profesor-d8800',
+    storageBucket: 'cuaderno-profesor-d8800.appspot.com',
   );
 
   static const FirebaseOptions ios = FirebaseOptions(
-    apiKey: 'AIzaSyDemoKey1234567890',
-    appId: '1:123456789:ios:abcdef123456',
-    messagingSenderId: '123456789',
-    projectId: 'cuaderno-profesor-demo',
-    storageBucket: 'cuaderno-profesor-demo.appspot.com',
+    apiKey: 'AIzaSyCOGATO09-G7wcdMQDhZhJYhhBK0N8drR4',
+    appId: '1:861387070043:ios:0132439afd06e642a1fd7e',
+    messagingSenderId: '861387070043',
+    projectId: 'cuaderno-profesor-d8800',
+    storageBucket: 'cuaderno-profesor-d8800.appspot.com',
     iosBundleId: 'com.example.cuadernoProfesor',
   );
 
@@ -76,11 +76,11 @@ class DefaultFirebaseOptions {
   );
 
   static const FirebaseOptions windows = FirebaseOptions(
-    apiKey: 'AIzaSyDemoKey1234567890',
-    appId: '1:123456789:web:abcdef123456',
-    messagingSenderId: '123456789',
-    projectId: 'cuaderno-profesor-demo',
-    authDomain: 'cuaderno-profesor-demo.firebaseapp.com',
-    storageBucket: 'cuaderno-profesor-demo.appspot.com',
+    apiKey: 'AIzaSyDQrQyjAzAth-gm_4PM9amQ8HAtrCmryBI',
+    appId: '1:861387070043:web:93560e7e6964f466a1fd7e',
+    messagingSenderId: '861387070043',
+    projectId: 'cuaderno-profesor-d8800',
+    authDomain: 'cuaderno-profesor-d8800.firebaseapp.com',
+    storageBucket: 'cuaderno-profesor-d8800.appspot.com',
   );
 }
