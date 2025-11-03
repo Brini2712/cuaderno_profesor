@@ -10,9 +10,7 @@ import 'screens/alumno_home_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   runApp(const CuadernoProfesorApp());
 }
 
@@ -22,9 +20,7 @@ class CuadernoProfesorApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MultiProvider(
-      providers: [
-        ChangeNotifierProvider(create: (_) => CuadernoProvider()),
-      ],
+      providers: [ChangeNotifierProvider(create: (_) => CuadernoProvider())],
       child: MaterialApp.router(
         title: 'Cuaderno Profesor',
         debugShowCheckedModeBanner: false,
@@ -40,13 +36,9 @@ class CuadernoProfesorApp extends StatelessWidget {
             foregroundColor: Colors.white,
             elevation: 0,
           ),
-          cardTheme: const CardThemeData(
-            elevation: 2,
-          ),
+          cardTheme: const CardThemeData(elevation: 2),
           inputDecorationTheme: InputDecorationTheme(
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
             filled: true,
             fillColor: Colors.grey[50],
           ),
@@ -71,10 +63,7 @@ class CuadernoProfesorApp extends StatelessWidget {
 final GoRouter _router = GoRouter(
   initialLocation: '/login',
   routes: [
-    GoRoute(
-      path: '/login',
-      builder: (context, state) => const LoginScreen(),
-    ),
+    GoRoute(path: '/login', builder: (context, state) => const LoginScreen()),
     GoRoute(
       path: '/profesor',
       builder: (context, state) => const ProfesorHomeScreen(),

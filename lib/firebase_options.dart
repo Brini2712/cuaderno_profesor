@@ -46,7 +46,7 @@ class DefaultFirebaseOptions {
     messagingSenderId: '861387070043',
     projectId: 'cuaderno-profesor-d8800',
     authDomain: 'cuaderno-profesor-d8800.firebaseapp.com',
-    storageBucket: 'cuaderno-profesor-d8800.appspot.com',
+    storageBucket: 'cuaderno-profesor-d8800.firebasestorage.app',
   );
 
   static const FirebaseOptions android = FirebaseOptions(
@@ -54,7 +54,7 @@ class DefaultFirebaseOptions {
     appId: '1:861387070043:android:bfdefc1230c3bd49a1fd7e',
     messagingSenderId: '861387070043',
     projectId: 'cuaderno-profesor-d8800',
-    storageBucket: 'cuaderno-profesor-d8800.appspot.com',
+    storageBucket: 'cuaderno-profesor-d8800.firebasestorage.app',
   );
 
   static const FirebaseOptions ios = FirebaseOptions(
@@ -62,7 +62,7 @@ class DefaultFirebaseOptions {
     appId: '1:861387070043:ios:0132439afd06e642a1fd7e',
     messagingSenderId: '861387070043',
     projectId: 'cuaderno-profesor-d8800',
-    storageBucket: 'cuaderno-profesor-d8800.appspot.com',
+    storageBucket: 'cuaderno-profesor-d8800.firebasestorage.app',
     iosBundleId: 'com.example.cuadernoProfesor',
   );
 
@@ -81,6 +81,7 @@ class DefaultFirebaseOptions {
     messagingSenderId: '861387070043',
     projectId: 'cuaderno-profesor-d8800',
     authDomain: 'cuaderno-profesor-d8800.firebaseapp.com',
-    storageBucket: 'cuaderno-profesor-d8800.appspot.com',
+    storageBucket: 'cuaderno-profesor-d8800.firebasestorage.app',
   );
+
 }
