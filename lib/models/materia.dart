@@ -7,6 +7,12 @@ class Materia {
   final List<String> alumnosIds;
   final DateTime fechaCreacion;
   final String? codigoAcceso;
+  // Número esperado de evidencias por parcial/periodo para esta materia
+  final int totalEvidenciasEsperadas;
+  // Pesos de evaluación (por defecto: Examen 40%, Portafolio 40%, Actividad 20%)
+  final double pesoExamen;
+  final double pesoPortafolio;
+  final double pesoActividad;
 
   Materia({
     required this.id,
@@ -17,6 +23,10 @@ class Materia {
     this.alumnosIds = const [],
     required this.fechaCreacion,
     this.codigoAcceso,
+    this.totalEvidenciasEsperadas = 10,
+    this.pesoExamen = 0.4,
+    this.pesoPortafolio = 0.4,
+    this.pesoActividad = 0.2,
   });
 
   Map<String, dynamic> toMap() {
@@ -29,6 +39,10 @@ class Materia {
       'alumnosIds': alumnosIds,
       'fechaCreacion': fechaCreacion.millisecondsSinceEpoch,
       'codigoAcceso': codigoAcceso,
+      'totalEvidenciasEsperadas': totalEvidenciasEsperadas,
+      'pesoExamen': pesoExamen,
+      'pesoPortafolio': pesoPortafolio,
+      'pesoActividad': pesoActividad,
     };
   }
 
@@ -40,8 +54,16 @@ class Materia {
       color: map['color'] ?? '#2196F3',
       profesorId: map['profesorId'] ?? '',
       alumnosIds: List<String>.from(map['alumnosIds'] ?? []),
-      fechaCreacion: DateTime.fromMillisecondsSinceEpoch(map['fechaCreacion'] ?? 0),
+      fechaCreacion: DateTime.fromMillisecondsSinceEpoch(
+        map['fechaCreacion'] ?? 0,
+      ),
       codigoAcceso: map['codigoAcceso'],
+      totalEvidenciasEsperadas: (map['totalEvidenciasEsperadas'] ?? 10) is int
+          ? (map['totalEvidenciasEsperadas'] ?? 10)
+          : (map['totalEvidenciasEsperadas'] ?? 10).toInt(),
+      pesoExamen: (map['pesoExamen'] ?? 0.4).toDouble(),
+      pesoPortafolio: (map['pesoPortafolio'] ?? 0.4).toDouble(),
+      pesoActividad: (map['pesoActividad'] ?? 0.2).toDouble(),
     );
   }
 
@@ -54,6 +76,10 @@ class Materia {
     List<String>? alumnosIds,
     DateTime? fechaCreacion,
     String? codigoAcceso,
+    int? totalEvidenciasEsperadas,
+    double? pesoExamen,
+    double? pesoPortafolio,
+    double? pesoActividad,
   }) {
     return Materia(
       id: id ?? this.id,
@@ -64,6 +90,11 @@ class Materia {
       alumnosIds: alumnosIds ?? this.alumnosIds,
       fechaCreacion: fechaCreacion ?? this.fechaCreacion,
       codigoAcceso: codigoAcceso ?? this.codigoAcceso,
+      totalEvidenciasEsperadas:
+          totalEvidenciasEsperadas ?? this.totalEvidenciasEsperadas,
+      pesoExamen: pesoExamen ?? this.pesoExamen,
+      pesoPortafolio: pesoPortafolio ?? this.pesoPortafolio,
+      pesoActividad: pesoActividad ?? this.pesoActividad,
     );
   }
 }

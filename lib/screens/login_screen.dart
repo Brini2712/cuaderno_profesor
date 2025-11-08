@@ -278,9 +278,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
                         if (_isLogin) ...[
                           TextButton(
-                            onPressed: () {
-                              // TODO: Implementar recuperación de contraseña
-                            },
+                            onPressed: () => _mostrarDialogoReset(context),
                             child: const Text(
                               '¿Olvidaste tu contraseña?',
                               style: TextStyle(color: Colors.grey),
@@ -350,5 +348,68 @@ class _LoginScreenState extends State<LoginScreen> {
         }
       }
     }
+  }
+
+  Future<void> _mostrarDialogoReset(BuildContext context) async {
+    final emailController = TextEditingController(text: _emailController.text);
+    final formKey = GlobalKey<FormState>();
+    final provider = context.read<CuadernoProvider>();
+    await showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Restablecer contraseña'),
+        content: Form(
+          key: formKey,
+          child: TextFormField(
+            controller: emailController,
+            keyboardType: TextInputType.emailAddress,
+            decoration: const InputDecoration(
+              labelText: 'Correo electrónico',
+              prefixIcon: Icon(Icons.email),
+            ),
+            validator: (value) {
+              if (value == null || value.isEmpty) {
+                return 'Ingresa tu correo';
+              }
+              if (!RegExp(
+                r'^[\w\-.]+@([\w\-]+\.)+[\w\-]{2,4}$',
+              ).hasMatch(value)) {
+                return 'Correo inválido';
+              }
+              return null;
+            },
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Cancelar'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              if (formKey.currentState?.validate() ?? false) {
+                final ok = await provider.resetPassword(
+                  emailController.text.trim(),
+                );
+                if (context.mounted) {
+                  Navigator.of(ctx).pop();
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        ok
+                            ? 'Te enviamos un correo para restablecer tu contraseña.'
+                            : provider.lastError ??
+                                  'No se pudo enviar el correo.',
+                      ),
+                    ),
+                  );
+                }
+              }
+            },
+            child: const Text('Enviar'),
+          ),
+        ],
+      ),
+    );
   }
 }

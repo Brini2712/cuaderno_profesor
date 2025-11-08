@@ -28,9 +28,7 @@ class _AlumnoHomeScreenState extends State<AlumnoHomeScreen> {
       builder: (context, provider, child) {
         if (provider.usuario == null) {
           return const Scaffold(
-            body: Center(
-              child: CircularProgressIndicator(),
-            ),
+            body: Center(child: CircularProgressIndicator()),
           );
         }
 
@@ -81,7 +79,8 @@ class _AlumnoHomeScreenState extends State<AlumnoHomeScreen> {
                   child: CircleAvatar(
                     backgroundColor: Colors.white,
                     child: Text(
-                      provider.usuario?.nombre.substring(0, 1).toUpperCase() ?? 'A',
+                      provider.usuario?.nombre.substring(0, 1).toUpperCase() ??
+                          'A',
                       style: const TextStyle(
                         color: Color(0xFF1976D2),
                         fontWeight: FontWeight.bold,
@@ -95,8 +94,8 @@ class _AlumnoHomeScreenState extends State<AlumnoHomeScreen> {
           body: RefreshIndicator(
             onRefresh: () => provider.cargarDatos(),
             child: provider.materias.isEmpty
-              ? _buildEmptyState(provider)
-              : _buildMateriasList(provider),
+                ? _buildEmptyState(provider)
+                : _buildMateriasList(provider),
           ),
           floatingActionButton: FloatingActionButton.extended(
             onPressed: () => _mostrarUnirseAClase(provider),
@@ -119,11 +118,7 @@ class _AlumnoHomeScreenState extends State<AlumnoHomeScreen> {
               color: Colors.grey[100],
               shape: BoxShape.circle,
             ),
-            child: Icon(
-              Icons.school,
-              size: 64,
-              color: Colors.grey[400],
-            ),
+            child: Icon(Icons.school, size: 64, color: Colors.grey[400]),
           ),
           const SizedBox(height: 24),
           Text(
@@ -138,10 +133,7 @@ class _AlumnoHomeScreenState extends State<AlumnoHomeScreen> {
           const SizedBox(height: 8),
           Text(
             'Únete a una clase usando el código proporcionado por tu profesor',
-            style: const TextStyle(
-              fontSize: 16,
-              color: Colors.grey,
-            ),
+            style: const TextStyle(fontSize: 16, color: Colors.grey),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 24),
@@ -177,7 +169,9 @@ class _AlumnoHomeScreenState extends State<AlumnoHomeScreen> {
                         width: 4,
                         height: 40,
                         decoration: BoxDecoration(
-                          color: Color(int.parse(materia.color.replaceAll('#', '0xFF'))),
+                          color: Color(
+                            int.parse(materia.color.replaceAll('#', '0xFF')),
+                          ),
                           borderRadius: BorderRadius.circular(2),
                         ),
                       ),
@@ -221,7 +215,10 @@ class _AlumnoHomeScreenState extends State<AlumnoHomeScreen> {
     );
   }
 
-  Widget _buildEstadisticasRapidas(CuadernoProvider provider, String materiaId) {
+  Widget _buildEstadisticasRapidas(
+    CuadernoProvider provider,
+    String materiaId,
+  ) {
     // Calcular estadísticas para esta materia
     double porcentajeAsistencia = provider.calcularPorcentajeAsistencia(
       provider.usuario!.id,
@@ -235,10 +232,7 @@ class _AlumnoHomeScreenState extends State<AlumnoHomeScreen> {
       provider.usuario!.id,
       materiaId,
     );
-    bool puedeExentar = provider.puedeExentar(
-      provider.usuario!.id,
-      materiaId,
-    );
+    bool puedeExentar = provider.puedeExentar(provider.usuario!.id, materiaId);
 
     return Column(
       children: [
@@ -346,10 +340,11 @@ class _AlumnoHomeScreenState extends State<AlumnoHomeScreen> {
 
   void _mostrarUnirseAClase(CuadernoProvider provider) {
     final codigoController = TextEditingController();
+    final parentContext = context; // Contexto del Scaffold
 
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (ctx) => AlertDialog(
         title: const Text('Unirse a Clase'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
@@ -371,20 +366,26 @@ class _AlumnoHomeScreenState extends State<AlumnoHomeScreen> {
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.of(context).pop(),
+            onPressed: () => Navigator.of(ctx).pop(),
             child: const Text('Cancelar'),
           ),
           ElevatedButton(
             onPressed: () async {
-              if (codigoController.text.trim().isNotEmpty) {
-                Navigator.of(context).pop();
-                // TODO: Implementar unirse a materia
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Funcionalidad en desarrollo'),
+              final code = codigoController.text.trim();
+              if (code.isEmpty) return;
+              Navigator.of(ctx).pop();
+              final ok = await provider.unirseAMateriaPorCodigo(code);
+              if (!mounted) return;
+              ScaffoldMessenger.of(parentContext).showSnackBar(
+                SnackBar(
+                  content: Text(
+                    ok
+                        ? 'Te has unido correctamente.'
+                        : provider.lastError ?? 'No se pudo unir a la materia',
                   ),
-                );
-              }
+                  backgroundColor: ok ? Colors.green : Colors.red,
+                ),
+              );
             },
             child: const Text('Unirse'),
           ),

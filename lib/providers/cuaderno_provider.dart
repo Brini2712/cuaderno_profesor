@@ -8,6 +8,7 @@ import '../models/evidencia.dart';
 import '../models/calificacion.dart';
 import '../services/auth_service.dart';
 import 'package:uuid/uuid.dart';
+import '../utils/analytics.dart';
 
 class CuadernoProvider extends ChangeNotifier {
   final AuthService _authService = AuthService();
@@ -21,6 +22,13 @@ class CuadernoProvider extends ChangeNotifier {
   List<Evidencia> _evidencias = [];
   List<Calificacion> _calificaciones = [];
   bool _isLoading = false;
+  String? _lastError;
+
+  // Subscripciones en tiempo real
+  StreamSubscription? _materiasSub;
+  StreamSubscription? _asistenciasSub;
+  StreamSubscription? _evidenciasSub;
+  StreamSubscription? _calificacionesSub;
 
   // Getters
   Usuario? get usuario => _usuario;
@@ -30,6 +38,7 @@ class CuadernoProvider extends ChangeNotifier {
   List<Evidencia> get evidencias => _evidencias;
   List<Calificacion> get calificaciones => _calificaciones;
   bool get isLoading => _isLoading;
+  String? get lastError => _lastError;
 
   // Autenticación
   Future<bool> iniciarSesion(String email, String password) async {
@@ -45,8 +54,10 @@ class CuadernoProvider extends ChangeNotifier {
         unawaited(cargarDatos());
         return true;
       }
+      _lastError = _authService.lastError;
       return false;
     } catch (e) {
+      _lastError = e.toString();
       return false;
     } finally {
       _setLoading(false);
@@ -73,8 +84,10 @@ class CuadernoProvider extends ChangeNotifier {
         unawaited(cargarDatos());
         return true;
       }
+      _lastError = _authService.lastError;
       return false;
     } catch (e) {
+      _lastError = e.toString();
       return false;
     } finally {
       _setLoading(false);
@@ -89,6 +102,7 @@ class CuadernoProvider extends ChangeNotifier {
     _asistencias.clear();
     _evidencias.clear();
     _calificaciones.clear();
+    _cancelSubscriptions();
     notifyListeners();
   }
 
@@ -97,18 +111,31 @@ class CuadernoProvider extends ChangeNotifier {
     if (_usuario == null) return;
 
     try {
+      // Configurar listeners en tiempo real primero
+      _configurarListeners();
+
       if (_usuario!.tipo == TipoUsuario.profesor) {
+        // Primero materias (dependencia para el resto)
         await cargarMaterias();
-        await cargarAlumnos();
-        await cargarAsistencias();
-        await cargarEvidencias();
-        await cargarCalificaciones();
+        // Paralelizar cargas dependientes de materias
+        await Future.wait([
+          cargarAlumnos(),
+          cargarAsistencias(),
+          cargarEvidencias(),
+          cargarCalificaciones(),
+        ]);
       } else {
         await cargarMateriasAlumno();
+        await Future.wait([
+          cargarAsistencias(),
+          cargarEvidencias(),
+          cargarCalificaciones(),
+        ]);
       }
       notifyListeners();
     } catch (e) {
       print('Error cargando datos: $e');
+      _lastError = 'Error cargando datos';
     }
   }
 
@@ -124,6 +151,7 @@ class CuadernoProvider extends ChangeNotifier {
     _materias = snapshot.docs
         .map((doc) => Materia.fromMap(doc.data() as Map<String, dynamic>))
         .toList();
+    _reiniciarSubsColecciones();
   }
 
   Future<void> cargarMateriasAlumno() async {
@@ -137,6 +165,7 @@ class CuadernoProvider extends ChangeNotifier {
     _materias = snapshot.docs
         .map((doc) => Materia.fromMap(doc.data() as Map<String, dynamic>))
         .toList();
+    _reiniciarSubsColecciones();
   }
 
   Future<void> agregarMateria(Materia materia) async {
@@ -197,6 +226,39 @@ class CuadernoProvider extends ChangeNotifier {
       }
     } catch (e) {
       print('Error agregando alumno a materia: $e');
+    }
+  }
+
+  // Unirse a materia únicamente con el código
+  Future<bool> unirseAMateriaPorCodigo(String codigo) async {
+    if (_usuario == null) return false;
+    _lastError = null;
+    try {
+      final snap = await _firestore
+          .collection('materias')
+          .where('codigoAcceso', isEqualTo: codigo.toUpperCase())
+          .get();
+      if (snap.docs.isEmpty) {
+        _lastError = 'Código no encontrado';
+        return false;
+      }
+      final doc = snap.docs.first;
+      final data = doc.data();
+      final alumnosIds = List<String>.from(data['alumnosIds'] ?? []);
+      if (alumnosIds.contains(_usuario!.id)) {
+        _lastError = 'Ya estás inscrito en esta materia';
+        return false;
+      }
+      await doc.reference.update({
+        'alumnosIds': FieldValue.arrayUnion([_usuario!.id]),
+      });
+      // Recargar materias del alumno
+      await cargarMateriasAlumno();
+      notifyListeners();
+      return true;
+    } catch (e) {
+      _lastError = 'Error al unirse a la materia';
+      return false;
     }
   }
 
@@ -290,37 +352,29 @@ class CuadernoProvider extends ChangeNotifier {
         .toList();
 
     if (asistenciasAlumno.isEmpty) return 0.0;
-
-    int asistencias = asistenciasAlumno
-        .where(
-          (a) =>
-              a.tipo == TipoAsistencia.asistencia ||
-              a.tipo == TipoAsistencia.justificacion,
-        )
-        .length;
-
-    int retardos = asistenciasAlumno
-        .where((a) => a.tipo == TipoAsistencia.retardo)
-        .length;
-
-    // 3 retardos = 1 falta
-    int faltasEquivalentes = (retardos / 3).floor();
-    int asistenciasEfectivas = asistencias - faltasEquivalentes;
-
-    return (asistenciasEfectivas / asistenciasAlumno.length) * 100;
+    return AnalyticsUtils.porcentajeAsistencia(asistenciasAlumno);
   }
 
   double calcularPorcentajeEvidencias(String alumnoId, String materiaId) {
     List<Evidencia> evidenciasAlumno = _evidencias
         .where((e) => e.alumnoId == alumnoId && e.materiaId == materiaId)
         .toList();
-
     if (evidenciasAlumno.isEmpty) return 0.0;
-
-    // Total de evidencias esperadas (esto debería configurarse por materia)
-    int totalEvidenciasEsperadas = 10; // Por ejemplo
-
-    return (evidenciasAlumno.length / totalEvidenciasEsperadas) * 100;
+    final materia = _materias.firstWhere(
+      (m) => m.id == materiaId,
+      orElse: () => Materia(
+        id: 'tmp',
+        nombre: 'tmp',
+        descripcion: '',
+        color: '#2196F3',
+        profesorId: _usuario?.id ?? '',
+        fechaCreacion: DateTime.now(),
+      ),
+    );
+    final total = materia.totalEvidenciasEsperadas == 0
+        ? 1
+        : materia.totalEvidenciasEsperadas;
+    return (evidenciasAlumno.length / total) * 100;
   }
 
   bool tieneRiesgoReprobacion(String alumnoId, String materiaId) {
@@ -332,8 +386,10 @@ class CuadernoProvider extends ChangeNotifier {
       alumnoId,
       materiaId,
     );
-
-    return porcentajeAsistencia < 80 || porcentajeEvidencias < 50;
+    return AnalyticsUtils.riesgoReprobacion(
+      porcentajeAsistencia: porcentajeAsistencia,
+      porcentajeEvidencias: porcentajeEvidencias,
+    );
   }
 
   bool puedeExentar(String alumnoId, String materiaId) {
@@ -345,12 +401,109 @@ class CuadernoProvider extends ChangeNotifier {
       alumnoId,
       materiaId,
     );
-
-    return porcentajeAsistencia >= 95 && porcentajeEvidencias >= 90;
+    return AnalyticsUtils.puedeExentar(
+      porcentajeAsistencia: porcentajeAsistencia,
+      porcentajeEvidencias: porcentajeEvidencias,
+    );
   }
 
   void _setLoading(bool value) {
     _isLoading = value;
     notifyListeners();
+  }
+
+  // Reset password wrapper
+  Future<bool> resetPassword(String email) async {
+    try {
+      await _authService.resetPassword(email);
+      return true;
+    } catch (e) {
+      _lastError = 'No se pudo enviar el correo de restablecimiento';
+      return false;
+    }
+  }
+
+  void _configurarListeners() {
+    _cancelSubscriptions();
+    if (_usuario == null) return;
+    if (_usuario!.tipo == TipoUsuario.profesor) {
+      _materiasSub = _firestore
+          .collection('materias')
+          .where('profesorId', isEqualTo: _usuario!.id)
+          .snapshots()
+          .listen((snapshot) {
+            _materias = snapshot.docs
+                .map((d) => Materia.fromMap(d.data()))
+                .toList();
+            _reiniciarSubsColecciones();
+            notifyListeners();
+          });
+    } else {
+      _materiasSub = _firestore
+          .collection('materias')
+          .where('alumnosIds', arrayContains: _usuario!.id)
+          .snapshots()
+          .listen((snapshot) {
+            _materias = snapshot.docs
+                .map((d) => Materia.fromMap(d.data()))
+                .toList();
+            _reiniciarSubsColecciones();
+            notifyListeners();
+          });
+    }
+  }
+
+  void _reiniciarSubsColecciones() {
+    _asistenciasSub?.cancel();
+    _evidenciasSub?.cancel();
+    _calificacionesSub?.cancel();
+    if (_materias.isEmpty) return;
+    final materiasIds = _materias.map((m) => m.id).toList();
+    // Si supera límite de whereIn (10) se podría fragmentar; se asume <=10 para MVP
+    if (materiasIds.length <= 10) {
+      _asistenciasSub = _firestore
+          .collection('asistencias')
+          .where('materiaId', whereIn: materiasIds)
+          .snapshots()
+          .listen((snapshot) {
+            _asistencias = snapshot.docs
+                .map((d) => RegistroAsistencia.fromMap(d.data()))
+                .toList();
+            notifyListeners();
+          });
+      _evidenciasSub = _firestore
+          .collection('evidencias')
+          .where('materiaId', whereIn: materiasIds)
+          .snapshots()
+          .listen((snapshot) {
+            _evidencias = snapshot.docs
+                .map((d) => Evidencia.fromMap(d.data()))
+                .toList();
+            notifyListeners();
+          });
+      _calificacionesSub = _firestore
+          .collection('calificaciones')
+          .where('materiaId', whereIn: materiasIds)
+          .snapshots()
+          .listen((snapshot) {
+            _calificaciones = snapshot.docs
+                .map((d) => Calificacion.fromMap(d.data()))
+                .toList();
+            notifyListeners();
+          });
+    }
+  }
+
+  void _cancelSubscriptions() {
+    _materiasSub?.cancel();
+    _asistenciasSub?.cancel();
+    _evidenciasSub?.cancel();
+    _calificacionesSub?.cancel();
+  }
+
+  @override
+  void dispose() {
+    _cancelSubscriptions();
+    super.dispose();
   }
 }

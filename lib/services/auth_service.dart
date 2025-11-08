@@ -6,6 +6,8 @@ class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
+  String? lastError;
+
   User? get currentUser => _auth.currentUser;
 
   Stream<User?> get authStateChanges => _auth.authStateChanges();
@@ -42,7 +44,11 @@ class AuthService {
       }
       return null;
     } catch (e) {
-      print('Error en registro: $e');
+      if (e is FirebaseAuthException) {
+        lastError = _traducirAuthError(e);
+      } else {
+        lastError = 'Error desconocido en registro';
+      }
       return null;
     }
   }
@@ -84,7 +90,11 @@ class AuthService {
       }
       return null;
     } catch (e) {
-      print('Error en login: $e');
+      if (e is FirebaseAuthException) {
+        lastError = _traducirAuthError(e);
+      } else {
+        lastError = 'Error desconocido en inicio de sesión';
+      }
       return null;
     }
   }
@@ -109,7 +119,7 @@ class AuthService {
     try {
       await _auth.signOut();
     } catch (e) {
-      print('Error al cerrar sesión: $e');
+      lastError = 'No se pudo cerrar sesión';
     }
   }
 
@@ -118,7 +128,34 @@ class AuthService {
     try {
       await _auth.sendPasswordResetEmail(email: email);
     } catch (e) {
-      print('Error al restablecer contraseña: $e');
+      if (e is FirebaseAuthException) {
+        lastError = _traducirAuthError(e);
+      } else {
+        lastError = 'No se pudo enviar el correo de restablecimiento';
+      }
+    }
+  }
+
+  String _traducirAuthError(FirebaseAuthException e) {
+    switch (e.code) {
+      case 'invalid-email':
+        return 'El correo tiene un formato inválido.';
+      case 'user-disabled':
+        return 'El usuario está deshabilitado.';
+      case 'user-not-found':
+        return 'No existe una cuenta con ese correo.';
+      case 'wrong-password':
+        return 'Contraseña incorrecta.';
+      case 'email-already-in-use':
+        return 'Ese correo ya está registrado.';
+      case 'weak-password':
+        return 'La contraseña es demasiado débil.';
+      case 'too-many-requests':
+        return 'Demasiados intentos. Intenta más tarde.';
+      case 'network-request-failed':
+        return 'Problema de red. Verifica tu conexión.';
+      default:
+        return 'Error de autenticación (${e.code}).';
     }
   }
 }

@@ -46,6 +46,30 @@ Aplicación móvil/web tipo Classroom para profesores y alumnos: registro de usu
 - `lib/providers/cuaderno_provider.dart`: Estado global (usuarios, materias, asistencias, evidencias, calificaciones).
 - `lib/services/auth_service.dart`: Autenticación y perfil en Firestore.
 - `lib/models/`: Modelos de datos (Usuario, Materia, Asistencia, Evidencia, Calificación).
+- `lib/utils/analytics.dart`: Funciones puras para porcentajes y reglas (riesgo / exento).
+
+## Unirse a una materia (Alumno)
+1. El profesor crea la materia (se genera automáticamente un `codigoAcceso` de 6 caracteres mostrado en la tarjeta de la materia).
+2. El alumno entra a su pantalla principal y pulsa "Unirse a Clase" (botón flotante o en el estado vacío).
+3. Ingresa el código tal como se le proporcionó (ejemplo: `AB12CD`).
+4. Si el código es válido y no estaba inscrito, se agrega su `uid` al array `alumnosIds` de la materia en Firestore y la lista se actualiza en tiempo real.
+
+Mensajes de error posibles:
+- "Código no encontrado": no existe una materia con ese código.
+- "Ya estás inscrito en esta materia": el alumno ya figura en `alumnosIds`.
+- "Error al unirse a la materia": error genérico (revisar conexión / reglas).
+
+### Seguridad sugerida (producción)
+Cambiar reglas para permitir agregar el propio `uid` solo si el documento de la materia contiene el `codigoAcceso` correcto. Ejemplo (pseudo):
+```
+match /materias/{id} {
+	allow update: if request.auth != null &&
+		request.resource.data.alumnosIds.size() == resource.data.alumnosIds.size() + 1 &&
+		request.resource.data.alumnosIds.hasOnly([request.auth.uid]) &&
+		request.resource.data.codigoAcceso == resource.data.codigoAcceso;
+}
+```
+Ajustar según las políticas reales y validar límites de `whereIn` si se superan 10 materias.
 
 ## Notas de seguridad
 - El archivo `lib/firebase_options.dart` (cliente) es seguro de commitear.
