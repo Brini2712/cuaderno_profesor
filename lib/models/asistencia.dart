@@ -1,3 +1,5 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 enum TipoAsistencia { asistencia, justificacion, falta, retardo }
 
 class RegistroAsistencia {
@@ -29,11 +31,25 @@ class RegistroAsistencia {
   }
 
   factory RegistroAsistencia.fromMap(Map<String, dynamic> map) {
+    // Soporte para fecha como int (ms since epoch) o Timestamp de Firestore
+    DateTime fechaParseada;
+    final rawFecha = map['fecha'];
+    if (rawFecha is int) {
+      fechaParseada = DateTime.fromMillisecondsSinceEpoch(rawFecha);
+    } else if (rawFecha is Timestamp) {
+      fechaParseada = rawFecha.toDate();
+    } else if (rawFecha is String) {
+      // fallback por si llega como string numérico
+      final ms = int.tryParse(rawFecha) ?? 0;
+      fechaParseada = DateTime.fromMillisecondsSinceEpoch(ms);
+    } else {
+      fechaParseada = DateTime.fromMillisecondsSinceEpoch(0);
+    }
     return RegistroAsistencia(
       id: map['id'] ?? '',
       materiaId: map['materiaId'] ?? '',
       alumnoId: map['alumnoId'] ?? '',
-      fecha: DateTime.fromMillisecondsSinceEpoch(map['fecha'] ?? 0),
+      fecha: fechaParseada,
       tipo: TipoAsistencia.values.firstWhere(
         (e) => e.toString().split('.').last == map['tipo'],
         orElse: () => TipoAsistencia.falta,

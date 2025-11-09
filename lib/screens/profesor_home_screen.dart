@@ -4,6 +4,7 @@ import '../providers/cuaderno_provider.dart';
 import '../models/materia.dart';
 import '../widgets/materia_card.dart';
 import '../widgets/crear_materia_dialog.dart';
+import 'profesor/tomar_asistencia_screen.dart';
 import 'package:go_router/go_router.dart';
 
 class ProfesorHomeScreen extends StatefulWidget {
@@ -33,9 +34,7 @@ class _ProfesorHomeScreenState extends State<ProfesorHomeScreen> {
       builder: (context, provider, child) {
         if (provider.usuario == null) {
           return const Scaffold(
-            body: Center(
-              child: CircularProgressIndicator(),
-            ),
+            body: Center(child: CircularProgressIndicator()),
           );
         }
 
@@ -76,7 +75,8 @@ class _ProfesorHomeScreenState extends State<ProfesorHomeScreen> {
                   child: CircleAvatar(
                     backgroundColor: Colors.white,
                     child: Text(
-                      provider.usuario?.nombre.substring(0, 1).toUpperCase() ?? 'P',
+                      provider.usuario?.nombre.substring(0, 1).toUpperCase() ??
+                          'P',
                       style: const TextStyle(
                         color: Color(0xFF1976D2),
                         fontWeight: FontWeight.bold,
@@ -124,12 +124,12 @@ class _ProfesorHomeScreenState extends State<ProfesorHomeScreen> {
               ),
             ],
           ),
-          floatingActionButton: _selectedIndex == 0 
-            ? FloatingActionButton(
-                onPressed: () => _mostrarCrearMateria(context, provider),
-                child: const Icon(Icons.add),
-              )
-            : null,
+          floatingActionButton: _selectedIndex == 0
+              ? FloatingActionButton(
+                  onPressed: () => _mostrarCrearMateria(context, provider),
+                  child: const Icon(Icons.add),
+                )
+              : null,
         );
       },
     );
@@ -139,43 +139,73 @@ class _ProfesorHomeScreenState extends State<ProfesorHomeScreen> {
     return RefreshIndicator(
       onRefresh: () => provider.cargarDatos(),
       child: provider.materias.isEmpty
-        ? _buildEmptyState(
-            icon: Icons.class_,
-            title: 'No tienes materias',
-            subtitle: 'Crea tu primera materia para empezar',
-            actionText: 'Crear Materia',
-            onAction: () => _mostrarCrearMateria(context, provider),
-          )
-        : ListView.builder(
-            padding: const EdgeInsets.all(16),
-            itemCount: provider.materias.length,
-            itemBuilder: (context, index) {
-              final materia = provider.materias[index];
-              return MateriaCard(
-                materia: materia,
-                onTap: () => _navegarAMateria(materia),
-              );
-            },
-          ),
+          ? _buildEmptyState(
+              icon: Icons.class_,
+              title: 'No tienes materias',
+              subtitle: 'Crea tu primera materia para empezar',
+              actionText: 'Crear Materia',
+              onAction: () => _mostrarCrearMateria(context, provider),
+            )
+          : ListView.builder(
+              padding: const EdgeInsets.all(16),
+              itemCount: provider.materias.length,
+              itemBuilder: (context, index) {
+                final materia = provider.materias[index];
+                return MateriaCard(
+                  materia: materia,
+                  onTap: () => _navegarAMateria(materia),
+                );
+              },
+            ),
     );
   }
 
   Widget _buildAsistenciasTab(CuadernoProvider provider) {
-    return const Center(
-      child: Text('Módulo de Asistencias - En construcción'),
+    if (provider.materias.isEmpty) {
+      return _buildEmptyState(
+        icon: Icons.how_to_reg,
+        title: 'Sin materias para tomar asistencia',
+        subtitle: 'Crea una materia y agrega alumnos para comenzar',
+        actionText: 'Crear Materia',
+        onAction: () => _mostrarCrearMateria(context, provider),
+      );
+    }
+
+    return ListView.builder(
+      padding: const EdgeInsets.all(16),
+      itemCount: provider.materias.length,
+      itemBuilder: (context, index) {
+        final m = provider.materias[index];
+        return Card(
+          margin: const EdgeInsets.only(bottom: 16),
+          child: ListTile(
+            leading: Container(
+              width: 6,
+              height: double.infinity,
+              color: Color(int.parse(m.color.replaceAll('#', '0xFF'))),
+            ),
+            title: Text(
+              m.nombre,
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
+            subtitle: Text(m.descripcion),
+            trailing: ElevatedButton.icon(
+              icon: const Icon(Icons.fact_check),
+              label: const Text('Tomar asistencia'),
+              onPressed: () => _abrirTomarAsistencia(m),
+            ),
+          ),
+        );
+      },
     );
   }
 
   Widget _buildEvidenciasTab(CuadernoProvider provider) {
-    return const Center(
-      child: Text('Módulo de Evidencias - En construcción'),
-    );
+    return const Center(child: Text('Módulo de Evidencias - En construcción'));
   }
 
   Widget _buildReportesTab(CuadernoProvider provider) {
-    return const Center(
-      child: Text('Módulo de Reportes - En construcción'),
-    );
+    return const Center(child: Text('Módulo de Reportes - En construcción'));
   }
 
   Widget _buildEmptyState({
@@ -195,11 +225,7 @@ class _ProfesorHomeScreenState extends State<ProfesorHomeScreen> {
               color: Colors.grey[100],
               shape: BoxShape.circle,
             ),
-            child: Icon(
-              icon,
-              size: 64,
-              color: Colors.grey[400],
-            ),
+            child: Icon(icon, size: 64, color: Colors.grey[400]),
           ),
           const SizedBox(height: 24),
           Text(
@@ -213,18 +239,12 @@ class _ProfesorHomeScreenState extends State<ProfesorHomeScreen> {
           const SizedBox(height: 8),
           Text(
             subtitle,
-            style: const TextStyle(
-              fontSize: 16,
-              color: Colors.grey,
-            ),
+            style: const TextStyle(fontSize: 16, color: Colors.grey),
             textAlign: TextAlign.center,
           ),
           if (actionText != null && onAction != null) ...[
             const SizedBox(height: 24),
-            ElevatedButton(
-              onPressed: onAction,
-              child: Text(actionText),
-            ),
+            ElevatedButton(onPressed: onAction, child: Text(actionText)),
           ],
         ],
       ),
@@ -253,6 +273,12 @@ class _ProfesorHomeScreenState extends State<ProfesorHomeScreen> {
   void _navegarAMateria(Materia materia) {
     // TODO: Navegar a la pantalla de detalle de la materia
     print('Navegar a materia: ${materia.nombre}');
+  }
+
+  void _abrirTomarAsistencia(Materia m) {
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => TomarAsistenciaScreen(materia: m)),
+    );
   }
 
   void _cerrarSesion(CuadernoProvider provider) {

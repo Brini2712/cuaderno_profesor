@@ -265,35 +265,109 @@ class CuadernoProvider extends ChangeNotifier {
   // Gestión de asistencias
   Future<void> cargarAsistencias() async {
     if (_materias.isEmpty) return;
-
-    List<String> materiasIds = _materias.map((m) => m.id).toList();
-
-    QuerySnapshot snapshot = await _firestore
+    final materiasIds = _materias.map((m) => m.id).toList();
+    // Asumimos <=10 materias para whereIn (MVP)
+    final snapshot = await _firestore
         .collection('asistencias')
         .where('materiaId', whereIn: materiasIds)
         .get();
-
     _asistencias = snapshot.docs
-        .map(
-          (doc) =>
-              RegistroAsistencia.fromMap(doc.data() as Map<String, dynamic>),
-        )
+        .map((d) => RegistroAsistencia.fromMap(d.data()))
         .toList();
   }
 
   Future<void> registrarAsistencia(RegistroAsistencia asistencia) async {
     try {
-      String id = _uuid.v4();
-      RegistroAsistencia nuevaAsistencia = asistencia.copyWith(id: id);
-
-      await _firestore
-          .collection('asistencias')
-          .doc(id)
-          .set(nuevaAsistencia.toMap());
-      _asistencias.add(nuevaAsistencia);
+      final id = asistencia.id.isEmpty ? _uuid.v4() : asistencia.id;
+      final nuevo = asistencia.copyWith(id: id);
+      await _firestore.collection('asistencias').doc(id).set(nuevo.toMap());
+      _asistencias.add(nuevo);
       notifyListeners();
     } catch (e) {
       print('Error registrando asistencia: $e');
+    }
+  }
+
+  // Guardar varias asistencias de un día (reemplaza las previas de esa fecha)
+  Future<void> guardarAsistenciasDia({
+    required String materiaId,
+    required DateTime fecha,
+    required List<RegistroAsistencia> registros,
+  }) async {
+    // Upsert por día con fallback cuando falta índice compuesto (materiaId+fecha rango)
+    try {
+      final start = DateTime(fecha.year, fecha.month, fecha.day);
+      final endMs =
+          start.add(const Duration(days: 1)).millisecondsSinceEpoch - 1;
+      final startMs = start.millisecondsSinceEpoch;
+      final alumnosSet = registros.map((r) => r.alumnoId).toSet();
+
+      QuerySnapshot<Map<String, dynamic>> prevSnap;
+      try {
+        prevSnap = await _firestore
+            .collection('asistencias')
+            .where('materiaId', isEqualTo: materiaId)
+            .where('fecha', isGreaterThanOrEqualTo: startMs)
+            .where('fecha', isLessThanOrEqualTo: endMs)
+            .get();
+      } on FirebaseException {
+        // Fallback: cargar por materia y filtrar por rango en cliente
+        prevSnap = await _firestore
+            .collection('asistencias')
+            .where('materiaId', isEqualTo: materiaId)
+            .get();
+      }
+
+      final prevDocs = prevSnap.docs.where((d) {
+        final data = d.data();
+        final raw = data['fecha'];
+        int ms;
+        if (raw is int) {
+          ms = raw;
+        } else if (raw is Timestamp) {
+          ms = raw.millisecondsSinceEpoch;
+        } else if (raw is String) {
+          ms = int.tryParse(raw) ?? 0;
+        } else {
+          ms = 0;
+        }
+        return ms >= startMs && ms <= endMs;
+      }).toList();
+
+      final batch = _firestore.batch();
+      for (final doc in prevDocs) {
+        final data = doc.data();
+        final alumnoId = data['alumnoId'] as String?;
+        if (alumnoId != null && alumnosSet.contains(alumnoId)) {
+          batch.delete(doc.reference);
+        }
+      }
+
+      final nuevosLoc = <RegistroAsistencia>[];
+      for (final reg in registros) {
+        final id = _uuid.v4();
+        final nuevo = reg.copyWith(id: id);
+        batch.set(_firestore.collection('asistencias').doc(id), nuevo.toMap());
+        nuevosLoc.add(nuevo);
+      }
+
+      await batch.commit();
+
+      _asistencias.removeWhere(
+        (a) =>
+            a.materiaId == materiaId &&
+            a.fecha.year == start.year &&
+            a.fecha.month == start.month &&
+            a.fecha.day == start.day &&
+            alumnosSet.contains(a.alumnoId),
+      );
+      _asistencias.addAll(nuevosLoc);
+      notifyListeners();
+      _lastError = null;
+    } on FirebaseException catch (e) {
+      _lastError = e.message ?? 'Error guardando asistencias (Firebase)';
+    } catch (e) {
+      _lastError = 'Error guardando asistencias';
     }
   }
 
