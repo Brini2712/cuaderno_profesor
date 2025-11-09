@@ -1,3 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?><?xml version="1.0" encoding="utf-8"?>
+
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android"><!-- Splash background recreated fresh to resolve Gradle snapshot error -->
+
+    <item android:drawable="@android:color/white"/><layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+
+</layer-list>    <item>
+
+        <shape android:shape="rectangle">
+            <solid android:color="@android:color/white" />
+        </shape>
+    </item>
+</layer-list>
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Clean re-created launch background to avoid file attribute issues. -->
 <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
