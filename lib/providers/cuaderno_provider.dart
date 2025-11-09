@@ -451,17 +451,84 @@ class CuadernoProvider extends ChangeNotifier {
 
   Future<void> agregarEvidencia(Evidencia evidencia) async {
     try {
-      String id = _uuid.v4();
-      Evidencia nuevaEvidencia = evidencia.copyWith(id: id);
+      // Obtener la materia para acceder a sus alumnos
+      final materia = _materias.firstWhere((m) => m.id == evidencia.materiaId);
 
-      await _firestore
-          .collection('evidencias')
-          .doc(id)
-          .set(nuevaEvidencia.toMap());
-      _evidencias.add(nuevaEvidencia);
+      // Crear una evidencia para cada alumno de la materia
+      final batch = _firestore.batch();
+      final nuevasEvidencias = <Evidencia>[];
+
+      for (final alumnoId in materia.alumnosIds) {
+        String id = _uuid.v4();
+        Evidencia nuevaEvidencia = evidencia.copyWith(
+          id: id,
+          alumnoId: alumnoId,
+        );
+
+        batch.set(
+          _firestore.collection('evidencias').doc(id),
+          nuevaEvidencia.toMap(),
+        );
+        nuevasEvidencias.add(nuevaEvidencia);
+      }
+
+      await batch.commit();
+      _evidencias.addAll(nuevasEvidencias);
       notifyListeners();
     } catch (e) {
       print('Error agregando evidencia: $e');
+      _lastError = 'Error agregando evidencia';
+    }
+  }
+
+  Future<bool> actualizarEvidencia(Evidencia evidencia) async {
+    try {
+      await _firestore
+          .collection('evidencias')
+          .doc(evidencia.id)
+          .update(evidencia.toMap());
+      final idx = _evidencias.indexWhere((e) => e.id == evidencia.id);
+      if (idx != -1) {
+        _evidencias[idx] = evidencia;
+        notifyListeners();
+      }
+      return true;
+    } catch (e) {
+      _lastError = 'Error actualizando evidencia';
+      return false;
+    }
+  }
+
+  Future<bool> eliminarEvidencia(String evidenciaId) async {
+    try {
+      await _firestore.collection('evidencias').doc(evidenciaId).delete();
+      _evidencias.removeWhere((e) => e.id == evidenciaId);
+      notifyListeners();
+      return true;
+    } catch (e) {
+      _lastError = 'Error eliminando evidencia';
+      return false;
+    }
+  }
+
+  // Cambiar estado de evidencia (alumno marca como entregado)
+  Future<bool> cambiarEstadoEvidencia(
+    String evidenciaId,
+    EstadoEvidencia nuevoEstado,
+  ) async {
+    try {
+      await _firestore.collection('evidencias').doc(evidenciaId).update({
+        'estado': nuevoEstado.toString().split('.').last,
+      });
+      final idx = _evidencias.indexWhere((e) => e.id == evidenciaId);
+      if (idx != -1) {
+        _evidencias[idx] = _evidencias[idx].copyWith(estado: nuevoEstado);
+        notifyListeners();
+      }
+      return true;
+    } catch (e) {
+      _lastError = 'Error cambiando estado';
+      return false;
     }
   }
 

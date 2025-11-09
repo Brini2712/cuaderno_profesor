@@ -1,16 +1,40 @@
 enum CalificacionEvidencia { A, B, C }
 
+enum TipoEvidencia { portafolio, actividad, examen }
+
+enum EstadoEvidencia {
+  asignado, // Asignado pero no entregado
+  entregado, // Entregado por el alumno
+  calificado, // Calificado por el profesor
+  devuelto, // Devuelto para corrección
+}
+
 class Evidencia {
   final String id;
   final String materiaId;
   final String alumnoId;
   final String titulo;
   final String descripcion;
-  final CalificacionEvidencia calificacion;
+  final TipoEvidencia tipo;
+  final EstadoEvidencia estado;
+  final CalificacionEvidencia? calificacion;
+  final double? calificacionNumerica; // 0-100
+  final double puntosTotales; // Puntos máximos de la evidencia
   final String? imagenUrl;
   final DateTime fechaEntrega;
   final DateTime fechaRegistro;
   final String profesorId;
+  final String? observaciones;
+
+  // Campos para la entrega del alumno
+  final DateTime? fechaEntregaAlumno;
+  final String? comentarioAlumno;
+  final List<String> archivosAdjuntos; // URLs de archivos
+  final String? enlaceExterno;
+
+  // Campos para la calificación del profesor
+  final String? comentarioProfesor;
+  final DateTime? fechaCalificacion;
 
   Evidencia({
     required this.id,
@@ -18,11 +42,22 @@ class Evidencia {
     required this.alumnoId,
     required this.titulo,
     required this.descripcion,
-    required this.calificacion,
+    required this.tipo,
+    this.estado = EstadoEvidencia.asignado,
+    this.calificacion,
+    this.calificacionNumerica,
+    this.puntosTotales = 100,
     this.imagenUrl,
     required this.fechaEntrega,
     required this.fechaRegistro,
     required this.profesorId,
+    this.observaciones,
+    this.fechaEntregaAlumno,
+    this.comentarioAlumno,
+    this.archivosAdjuntos = const [],
+    this.enlaceExterno,
+    this.comentarioProfesor,
+    this.fechaCalificacion,
   });
 
   Map<String, dynamic> toMap() {
@@ -32,11 +67,22 @@ class Evidencia {
       'alumnoId': alumnoId,
       'titulo': titulo,
       'descripcion': descripcion,
-      'calificacion': calificacion.toString().split('.').last,
+      'tipo': tipo.toString().split('.').last,
+      'estado': estado.toString().split('.').last,
+      'calificacion': calificacion?.toString().split('.').last,
+      'calificacionNumerica': calificacionNumerica,
+      'puntosTotales': puntosTotales,
       'imagenUrl': imagenUrl,
       'fechaEntrega': fechaEntrega.millisecondsSinceEpoch,
       'fechaRegistro': fechaRegistro.millisecondsSinceEpoch,
       'profesorId': profesorId,
+      'observaciones': observaciones,
+      'fechaEntregaAlumno': fechaEntregaAlumno?.millisecondsSinceEpoch,
+      'comentarioAlumno': comentarioAlumno,
+      'archivosAdjuntos': archivosAdjuntos,
+      'enlaceExterno': enlaceExterno,
+      'comentarioProfesor': comentarioProfesor,
+      'fechaCalificacion': fechaCalificacion?.millisecondsSinceEpoch,
     };
   }
 
@@ -47,19 +93,48 @@ class Evidencia {
       alumnoId: map['alumnoId'] ?? '',
       titulo: map['titulo'] ?? '',
       descripcion: map['descripcion'] ?? '',
-      calificacion: CalificacionEvidencia.values.firstWhere(
-        (e) => e.toString().split('.').last == map['calificacion'],
-        orElse: () => CalificacionEvidencia.C,
+      tipo: TipoEvidencia.values.firstWhere(
+        (e) => e.toString().split('.').last == map['tipo'],
+        orElse: () => TipoEvidencia.actividad,
       ),
+      estado: EstadoEvidencia.values.firstWhere(
+        (e) => e.toString().split('.').last == map['estado'],
+        orElse: () => EstadoEvidencia.asignado,
+      ),
+      calificacion: map['calificacion'] != null
+          ? CalificacionEvidencia.values.firstWhere(
+              (e) => e.toString().split('.').last == map['calificacion'],
+              orElse: () => CalificacionEvidencia.C,
+            )
+          : null,
+      calificacionNumerica: map['calificacionNumerica']?.toDouble(),
+      puntosTotales: map['puntosTotales']?.toDouble() ?? 100,
       imagenUrl: map['imagenUrl'],
-      fechaEntrega: DateTime.fromMillisecondsSinceEpoch(map['fechaEntrega'] ?? 0),
-      fechaRegistro: DateTime.fromMillisecondsSinceEpoch(map['fechaRegistro'] ?? 0),
+      fechaEntrega: DateTime.fromMillisecondsSinceEpoch(
+        map['fechaEntrega'] ?? 0,
+      ),
+      fechaRegistro: DateTime.fromMillisecondsSinceEpoch(
+        map['fechaRegistro'] ?? 0,
+      ),
       profesorId: map['profesorId'] ?? '',
+      observaciones: map['observaciones'],
+      fechaEntregaAlumno: map['fechaEntregaAlumno'] != null
+          ? DateTime.fromMillisecondsSinceEpoch(map['fechaEntregaAlumno'])
+          : null,
+      comentarioAlumno: map['comentarioAlumno'],
+      archivosAdjuntos: List<String>.from(map['archivosAdjuntos'] ?? []),
+      enlaceExterno: map['enlaceExterno'],
+      comentarioProfesor: map['comentarioProfesor'],
+      fechaCalificacion: map['fechaCalificacion'] != null
+          ? DateTime.fromMillisecondsSinceEpoch(map['fechaCalificacion'])
+          : null,
     );
   }
 
   int get valorNumerico {
-    switch (calificacion) {
+    if (calificacionNumerica != null) return calificacionNumerica!.round();
+    if (calificacion == null) return 0;
+    switch (calificacion!) {
       case CalificacionEvidencia.A:
         return 10;
       case CalificacionEvidencia.B:
@@ -75,11 +150,22 @@ class Evidencia {
     String? alumnoId,
     String? titulo,
     String? descripcion,
+    TipoEvidencia? tipo,
+    EstadoEvidencia? estado,
     CalificacionEvidencia? calificacion,
+    double? calificacionNumerica,
+    double? puntosTotales,
     String? imagenUrl,
     DateTime? fechaEntrega,
     DateTime? fechaRegistro,
     String? profesorId,
+    String? observaciones,
+    DateTime? fechaEntregaAlumno,
+    String? comentarioAlumno,
+    List<String>? archivosAdjuntos,
+    String? enlaceExterno,
+    String? comentarioProfesor,
+    DateTime? fechaCalificacion,
   }) {
     return Evidencia(
       id: id ?? this.id,
@@ -87,11 +173,28 @@ class Evidencia {
       alumnoId: alumnoId ?? this.alumnoId,
       titulo: titulo ?? this.titulo,
       descripcion: descripcion ?? this.descripcion,
+      tipo: tipo ?? this.tipo,
+      estado: estado ?? this.estado,
       calificacion: calificacion ?? this.calificacion,
+      calificacionNumerica: calificacionNumerica ?? this.calificacionNumerica,
+      puntosTotales: puntosTotales ?? this.puntosTotales,
       imagenUrl: imagenUrl ?? this.imagenUrl,
       fechaEntrega: fechaEntrega ?? this.fechaEntrega,
       fechaRegistro: fechaRegistro ?? this.fechaRegistro,
       profesorId: profesorId ?? this.profesorId,
+      observaciones: observaciones ?? this.observaciones,
+      fechaEntregaAlumno: fechaEntregaAlumno ?? this.fechaEntregaAlumno,
+      comentarioAlumno: comentarioAlumno ?? this.comentarioAlumno,
+      archivosAdjuntos: archivosAdjuntos ?? this.archivosAdjuntos,
+      enlaceExterno: enlaceExterno ?? this.enlaceExterno,
+      comentarioProfesor: comentarioProfesor ?? this.comentarioProfesor,
+      fechaCalificacion: fechaCalificacion ?? this.fechaCalificacion,
     );
   }
+
+  bool get estaAtrasado =>
+      DateTime.now().isAfter(fechaEntrega) &&
+      estado == EstadoEvidencia.asignado;
+  bool get fueEntregadoATiempo =>
+      fechaEntregaAlumno != null && fechaEntregaAlumno!.isBefore(fechaEntrega);
 }

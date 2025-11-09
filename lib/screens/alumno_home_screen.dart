@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/cuaderno_provider.dart';
 import 'package:go_router/go_router.dart';
+import '../models/materia.dart';
+import '../models/evidencia.dart';
+import 'alumno/alumno_evidencias_screen.dart';
 
 class AlumnoHomeScreen extends StatefulWidget {
   const AlumnoHomeScreen({super.key});
@@ -11,6 +14,8 @@ class AlumnoHomeScreen extends StatefulWidget {
 }
 
 class _AlumnoHomeScreenState extends State<AlumnoHomeScreen> {
+  int _selectedIndex = 0;
+
   @override
   void initState() {
     super.initState();
@@ -33,77 +38,353 @@ class _AlumnoHomeScreenState extends State<AlumnoHomeScreen> {
         }
 
         return Scaffold(
-          appBar: AppBar(
-            title: const Text('Mi Progreso'),
-            actions: [
-              PopupMenuButton<String>(
-                onSelected: (value) {
-                  if (value == 'logout') {
-                    _cerrarSesion(provider);
-                  }
+          body: Row(
+            children: [
+              // Menú lateral estilo Google Classroom
+              NavigationRail(
+                backgroundColor: Colors.white,
+                selectedIndex: _selectedIndex,
+                onDestinationSelected: (index) {
+                  setState(() {
+                    _selectedIndex = index;
+                  });
                 },
-                itemBuilder: (context) => [
-                  PopupMenuItem(
-                    value: 'profile',
-                    child: Row(
-                      children: const [
-                        Icon(Icons.person),
-                        SizedBox(width: 8),
-                        Text('Mi Perfil'),
-                      ],
-                    ),
-                  ),
-                  PopupMenuItem(
-                    value: 'join',
-                    child: Row(
-                      children: const [
-                        Icon(Icons.add_box),
-                        SizedBox(width: 8),
-                        Text('Unirse a Clase'),
-                      ],
-                    ),
-                  ),
-                  PopupMenuItem(
-                    value: 'logout',
-                    child: Row(
-                      children: const [
-                        Icon(Icons.logout),
-                        SizedBox(width: 8),
-                        Text('Cerrar Sesión'),
-                      ],
-                    ),
-                  ),
-                ],
-                child: Padding(
-                  padding: const EdgeInsets.all(8.0),
-                  child: CircleAvatar(
-                    backgroundColor: Colors.white,
-                    child: Text(
-                      provider.usuario?.nombre.substring(0, 1).toUpperCase() ??
-                          'A',
-                      style: const TextStyle(
+                labelType: NavigationRailLabelType.all,
+                leading: Column(
+                  children: [
+                    const SizedBox(height: 8),
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      child: const Icon(
+                        Icons.school,
+                        size: 32,
                         color: Color(0xFF1976D2),
-                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                  ],
+                ),
+                trailing: Expanded(
+                  child: Align(
+                    alignment: Alignment.bottomCenter,
+                    child: Padding(
+                      padding: const EdgeInsets.only(bottom: 16),
+                      child: PopupMenuButton<String>(
+                        onSelected: (value) {
+                          if (value == 'logout') {
+                            _cerrarSesion(provider);
+                          } else if (value == 'join') {
+                            _mostrarUnirseAClase(provider);
+                          }
+                        },
+                        itemBuilder: (context) => [
+                          PopupMenuItem(
+                            value: 'profile',
+                            child: Row(
+                              children: const [
+                                Icon(Icons.person),
+                                SizedBox(width: 8),
+                                Text('Mi Perfil'),
+                              ],
+                            ),
+                          ),
+                          PopupMenuItem(
+                            value: 'join',
+                            child: Row(
+                              children: const [
+                                Icon(Icons.add_box),
+                                SizedBox(width: 8),
+                                Text('Unirse a Clase'),
+                              ],
+                            ),
+                          ),
+                          PopupMenuItem(
+                            value: 'logout',
+                            child: Row(
+                              children: const [
+                                Icon(Icons.logout),
+                                SizedBox(width: 8),
+                                Text('Cerrar Sesión'),
+                              ],
+                            ),
+                          ),
+                        ],
+                        child: CircleAvatar(
+                          backgroundColor: const Color(0xFF1976D2),
+                          child: Text(
+                            provider.usuario?.nombre
+                                    .substring(0, 1)
+                                    .toUpperCase() ??
+                                'A',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
                       ),
                     ),
                   ),
                 ),
+                destinations: const [
+                  NavigationRailDestination(
+                    icon: Icon(Icons.home_outlined),
+                    selectedIcon: Icon(Icons.home),
+                    label: Text('Inicio'),
+                  ),
+                  NavigationRailDestination(
+                    icon: Icon(Icons.class_outlined),
+                    selectedIcon: Icon(Icons.class_),
+                    label: Text('Mis clases'),
+                  ),
+                  NavigationRailDestination(
+                    icon: Icon(Icons.calendar_today_outlined),
+                    selectedIcon: Icon(Icons.calendar_today),
+                    label: Text('Calendario'),
+                  ),
+                ],
+              ),
+              const VerticalDivider(thickness: 1, width: 1),
+              // Contenido principal
+              Expanded(
+                child: Column(
+                  children: [
+                    // AppBar personalizado
+                    Container(
+                      height: 64,
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.05),
+                            blurRadius: 4,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: Row(
+                        children: [
+                          Text(
+                            _getTituloPorSeccion(),
+                            style: const TextStyle(
+                              fontSize: 22,
+                              fontWeight: FontWeight.w400,
+                            ),
+                          ),
+                          const Spacer(),
+                          IconButton(
+                            icon: const Icon(Icons.add_box_outlined),
+                            onPressed: () => _mostrarUnirseAClase(provider),
+                            tooltip: 'Unirse a clase',
+                          ),
+                        ],
+                      ),
+                    ),
+                    // Contenido
+                    Expanded(
+                      child: IndexedStack(
+                        index: _selectedIndex,
+                        children: [
+                          _buildInicioTab(provider),
+                          _buildMisClasesTab(provider),
+                          _buildCalendarioTab(provider),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ],
           ),
-          body: RefreshIndicator(
-            onRefresh: () => provider.cargarDatos(),
-            child: provider.materias.isEmpty
-                ? _buildEmptyState(provider)
-                : _buildMateriasList(provider),
-          ),
-          floatingActionButton: FloatingActionButton.extended(
-            onPressed: () => _mostrarUnirseAClase(provider),
-            icon: const Icon(Icons.add),
-            label: const Text('Unirse a Clase'),
-          ),
+          floatingActionButton: _selectedIndex == 1
+              ? FloatingActionButton.extended(
+                  onPressed: () => _mostrarUnirseAClase(provider),
+                  icon: const Icon(Icons.add),
+                  label: const Text('Unirse a clase'),
+                )
+              : null,
         );
       },
+    );
+  }
+
+  String _getTituloPorSeccion() {
+    switch (_selectedIndex) {
+      case 0:
+        return 'Inicio';
+      case 1:
+        return 'Mis clases';
+      case 2:
+        return 'Calendario';
+      default:
+        return 'Mi Progreso';
+    }
+  }
+
+  Widget _buildInicioTab(CuadernoProvider provider) {
+    return RefreshIndicator(
+      onRefresh: () => provider.cargarDatos(),
+      child: provider.materias.isEmpty
+          ? _buildEmptyState(provider)
+          : ListView(
+              padding: const EdgeInsets.all(24),
+              children: [
+                Text(
+                  '¡Hola, ${provider.usuario?.nombre ?? "Alumno"}!',
+                  style: const TextStyle(
+                    fontSize: 32,
+                    fontWeight: FontWeight.w400,
+                  ),
+                ),
+                const SizedBox(height: 24),
+                _buildResumenGeneral(provider),
+                const SizedBox(height: 32),
+                const Text(
+                  'Mis clases',
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.w500),
+                ),
+                const SizedBox(height: 16),
+                ...provider.materias.map(
+                  (materia) => _buildMateriaCard(materia, provider),
+                ),
+              ],
+            ),
+    );
+  }
+
+  Widget _buildResumenGeneral(CuadernoProvider provider) {
+    final totalClases = provider.materias.length;
+    final totalEvidencias = provider.evidencias
+        .where((e) => e.alumnoId == provider.usuario!.id)
+        .length;
+    final evidenciasEntregadas = provider.evidencias
+        .where(
+          (e) =>
+              e.alumnoId == provider.usuario!.id &&
+              e.estado != EstadoEvidencia.asignado,
+        )
+        .length;
+
+    return Wrap(
+      spacing: 16,
+      runSpacing: 16,
+      children: [
+        _buildStatCardAlumno(
+          icon: Icons.class_,
+          title: 'Clases',
+          value: totalClases.toString(),
+          color: Colors.blue,
+        ),
+        _buildStatCardAlumno(
+          icon: Icons.assignment,
+          title: 'Evidencias',
+          value: '$evidenciasEntregadas/$totalEvidencias',
+          color: Colors.green,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildStatCardAlumno({
+    required IconData icon,
+    required String title,
+    required String value,
+    required Color color,
+  }) {
+    return Container(
+      width: 180,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey[200]!),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, color: color, size: 28),
+          const SizedBox(height: 12),
+          Text(
+            value,
+            style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
+          ),
+          Text(title, style: TextStyle(fontSize: 14, color: Colors.grey[600])),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMateriaCard(Materia materia, CuadernoProvider provider) {
+    return Card(
+      margin: const EdgeInsets.only(bottom: 16),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: () => _navegarADetalleMateria(materia.id),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            children: [
+              Container(
+                width: 4,
+                height: 50,
+                decoration: BoxDecoration(
+                  color: Color(
+                    int.parse(materia.color.replaceAll('#', '0xFF')),
+                  ),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      materia.nombre,
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      materia.descripcion,
+                      style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+                    ),
+                  ],
+                ),
+              ),
+              const Icon(Icons.arrow_forward_ios, size: 16),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMisClasesTab(CuadernoProvider provider) {
+    return RefreshIndicator(
+      onRefresh: () => provider.cargarDatos(),
+      child: provider.materias.isEmpty
+          ? _buildEmptyState(provider)
+          : _buildMateriasList(provider),
+    );
+  }
+
+  Widget _buildCalendarioTab(CuadernoProvider provider) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.calendar_today, size: 64, color: Colors.grey[300]),
+          const SizedBox(height: 16),
+          Text(
+            'Calendario próximamente',
+            style: TextStyle(fontSize: 18, color: Colors.grey[600]),
+          ),
+        ],
+      ),
     );
   }
 
@@ -395,8 +676,14 @@ class _AlumnoHomeScreenState extends State<AlumnoHomeScreen> {
   }
 
   void _navegarADetalleMateria(String materiaId) {
-    // TODO: Navegar a la pantalla de detalle de la materia para el alumno
-    print('Navegar a detalle de materia: $materiaId');
+    final provider = context.read<CuadernoProvider>();
+    final materia = provider.materias.firstWhere((m) => m.id == materiaId);
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (ctx) => AlumnoEvidenciasScreen(materia: materia),
+      ),
+    );
   }
 
   void _cerrarSesion(CuadernoProvider provider) {

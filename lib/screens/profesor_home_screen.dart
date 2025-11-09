@@ -7,6 +7,7 @@ import '../widgets/crear_materia_dialog.dart';
 import 'profesor/tomar_asistencia_screen.dart';
 import 'profesor/detalle_materia_screen.dart';
 import 'profesor/materia_search_delegate.dart';
+import 'profesor/gestion_evidencias_screen.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter/services.dart';
 
@@ -42,105 +43,386 @@ class _ProfesorHomeScreenState extends State<ProfesorHomeScreen> {
         }
 
         return Scaffold(
-          appBar: AppBar(
-            title: const Text('Cuaderno Profesor'),
-            leading: IconButton(
-              icon: const Icon(Icons.search),
-              onPressed: () async {
-                showSearch(context: context, delegate: MateriaSearchDelegate());
-              },
-            ),
-            actions: [
-              PopupMenuButton<String>(
-                onSelected: (value) {
-                  if (value == 'logout') {
-                    _cerrarSesion(provider);
-                  }
+          body: Row(
+            children: [
+              // Menú lateral estilo Google Classroom
+              NavigationRail(
+                backgroundColor: Colors.white,
+                selectedIndex: _selectedIndex,
+                onDestinationSelected: (index) {
+                  setState(() {
+                    _selectedIndex = index;
+                  });
                 },
-                itemBuilder: (context) => [
-                  PopupMenuItem(
-                    value: 'profile',
-                    child: Row(
-                      children: const [
-                        Icon(Icons.person),
-                        SizedBox(width: 8),
-                        Text('Mi Perfil'),
-                      ],
-                    ),
-                  ),
-                  PopupMenuItem(
-                    value: 'logout',
-                    child: Row(
-                      children: const [
-                        Icon(Icons.logout),
-                        SizedBox(width: 8),
-                        Text('Cerrar Sesión'),
-                      ],
-                    ),
-                  ),
-                ],
-                child: Padding(
-                  padding: const EdgeInsets.all(8.0),
-                  child: CircleAvatar(
-                    backgroundColor: Colors.white,
-                    child: Text(
-                      provider.usuario?.nombre.substring(0, 1).toUpperCase() ??
-                          'P',
-                      style: const TextStyle(
+                labelType: NavigationRailLabelType.all,
+                leading: Column(
+                  children: [
+                    const SizedBox(height: 8),
+                    // Logo o título
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      child: const Icon(
+                        Icons.school,
+                        size: 32,
                         color: Color(0xFF1976D2),
-                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                  ],
+                ),
+                trailing: Expanded(
+                  child: Align(
+                    alignment: Alignment.bottomCenter,
+                    child: Padding(
+                      padding: const EdgeInsets.only(bottom: 16),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          IconButton(
+                            icon: const Icon(Icons.settings_outlined),
+                            onPressed: () {},
+                            tooltip: 'Ajustes',
+                          ),
+                          const SizedBox(height: 8),
+                          PopupMenuButton<String>(
+                            onSelected: (value) {
+                              if (value == 'logout') {
+                                _cerrarSesion(provider);
+                              }
+                            },
+                            itemBuilder: (context) => [
+                              PopupMenuItem(
+                                value: 'profile',
+                                child: Row(
+                                  children: const [
+                                    Icon(Icons.person),
+                                    SizedBox(width: 8),
+                                    Text('Mi Perfil'),
+                                  ],
+                                ),
+                              ),
+                              PopupMenuItem(
+                                value: 'logout',
+                                child: Row(
+                                  children: const [
+                                    Icon(Icons.logout),
+                                    SizedBox(width: 8),
+                                    Text('Cerrar Sesión'),
+                                  ],
+                                ),
+                              ),
+                            ],
+                            child: CircleAvatar(
+                              backgroundColor: const Color(0xFF1976D2),
+                              child: Text(
+                                provider.usuario?.nombre
+                                        .substring(0, 1)
+                                        .toUpperCase() ??
+                                    'P',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ),
                 ),
+                destinations: const [
+                  NavigationRailDestination(
+                    icon: Icon(Icons.home_outlined),
+                    selectedIcon: Icon(Icons.home),
+                    label: Text('Inicio'),
+                  ),
+                  NavigationRailDestination(
+                    icon: Icon(Icons.class_outlined),
+                    selectedIcon: Icon(Icons.class_),
+                    label: Text('Materias'),
+                  ),
+                  NavigationRailDestination(
+                    icon: Icon(Icons.how_to_reg_outlined),
+                    selectedIcon: Icon(Icons.how_to_reg),
+                    label: Text('Asistencia'),
+                  ),
+                  NavigationRailDestination(
+                    icon: Icon(Icons.assignment_outlined),
+                    selectedIcon: Icon(Icons.assignment),
+                    label: Text('Evidencias'),
+                  ),
+                  NavigationRailDestination(
+                    icon: Icon(Icons.assessment_outlined),
+                    selectedIcon: Icon(Icons.assessment),
+                    label: Text('Reportes'),
+                  ),
+                ],
+              ),
+              const VerticalDivider(thickness: 1, width: 1),
+              // Contenido principal
+              Expanded(
+                child: Column(
+                  children: [
+                    // AppBar personalizado
+                    Container(
+                      height: 64,
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.05),
+                            blurRadius: 4,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: Row(
+                        children: [
+                          Text(
+                            _getTituloPorSeccion(),
+                            style: const TextStyle(
+                              fontSize: 22,
+                              fontWeight: FontWeight.w400,
+                            ),
+                          ),
+                          const Spacer(),
+                          if (_selectedIndex == 1)
+                            IconButton(
+                              icon: const Icon(Icons.search),
+                              onPressed: () {
+                                showSearch(
+                                  context: context,
+                                  delegate: MateriaSearchDelegate(),
+                                );
+                              },
+                              tooltip: 'Buscar materia',
+                            ),
+                        ],
+                      ),
+                    ),
+                    // Contenido
+                    Expanded(
+                      child: IndexedStack(
+                        index: _selectedIndex,
+                        children: [
+                          _buildInicioTab(provider),
+                          _buildMateriasTab(provider),
+                          _buildAsistenciasTab(provider),
+                          _buildEvidenciasTab(provider),
+                          _buildReportesTab(provider),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ],
           ),
-          body: IndexedStack(
-            index: _selectedIndex,
-            children: [
-              _buildMateriasTab(provider),
-              _buildAsistenciasTab(provider),
-              _buildEvidenciasTab(provider),
-              _buildReportesTab(provider),
-            ],
-          ),
-          bottomNavigationBar: BottomNavigationBar(
-            type: BottomNavigationBarType.fixed,
-            currentIndex: _selectedIndex,
-            onTap: (index) {
-              setState(() {
-                _selectedIndex = index;
-              });
-            },
-            selectedItemColor: const Color(0xFF1976D2),
-            items: const [
-              BottomNavigationBarItem(
-                icon: Icon(Icons.class_),
-                label: 'Materias',
-              ),
-              BottomNavigationBarItem(
-                icon: Icon(Icons.how_to_reg),
-                label: 'Asistencia',
-              ),
-              BottomNavigationBarItem(
-                icon: Icon(Icons.assignment),
-                label: 'Evidencias',
-              ),
-              BottomNavigationBarItem(
-                icon: Icon(Icons.assessment),
-                label: 'Reportes',
-              ),
-            ],
-          ),
-          floatingActionButton: _selectedIndex == 0
-              ? FloatingActionButton(
+          floatingActionButton: _selectedIndex == 1
+              ? FloatingActionButton.extended(
                   onPressed: () => _mostrarCrearMateria(context, provider),
-                  child: const Icon(Icons.add),
+                  icon: const Icon(Icons.add),
+                  label: const Text('Crear materia'),
                 )
               : null,
         );
       },
+    );
+  }
+
+  String _getTituloPorSeccion() {
+    switch (_selectedIndex) {
+      case 0:
+        return 'Inicio';
+      case 1:
+        return 'Materias';
+      case 2:
+        return 'Asistencia';
+      case 3:
+        return 'Evidencias';
+      case 4:
+        return 'Reportes';
+      default:
+        return 'Cuaderno Profesor';
+    }
+  }
+
+  Widget _buildInicioTab(CuadernoProvider provider) {
+    final totalMaterias = provider.materias.length;
+    final totalAlumnos = provider.alumnos.length;
+    final materiasActivas = provider.materias
+        .where((m) => m.alumnosIds.isNotEmpty)
+        .length;
+
+    return RefreshIndicator(
+      onRefresh: () => provider.cargarDatos(),
+      child: ListView(
+        padding: const EdgeInsets.all(24),
+        children: [
+          // Saludo
+          Text(
+            '¡Hola, ${provider.usuario?.nombre ?? "Profesor"}!',
+            style: const TextStyle(fontSize: 32, fontWeight: FontWeight.w400),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Bienvenido a tu cuaderno digital',
+            style: TextStyle(fontSize: 16, color: Colors.grey[600]),
+          ),
+          const SizedBox(height: 32),
+
+          // Tarjetas de resumen
+          Wrap(
+            spacing: 16,
+            runSpacing: 16,
+            children: [
+              _buildStatCard(
+                icon: Icons.class_,
+                title: 'Materias',
+                value: totalMaterias.toString(),
+                subtitle: '$materiasActivas activas',
+                color: Colors.blue,
+                onTap: () => setState(() => _selectedIndex = 1),
+              ),
+              _buildStatCard(
+                icon: Icons.people,
+                title: 'Alumnos',
+                value: totalAlumnos.toString(),
+                subtitle: 'Total registrados',
+                color: Colors.green,
+              ),
+              _buildStatCard(
+                icon: Icons.assignment,
+                title: 'Evidencias',
+                value: provider.evidencias.length.toString(),
+                subtitle: 'Total asignadas',
+                color: Colors.orange,
+                onTap: () => setState(() => _selectedIndex = 3),
+              ),
+              _buildStatCard(
+                icon: Icons.how_to_reg,
+                title: 'Asistencias',
+                value: provider.asistencias.length.toString(),
+                subtitle: 'Registros totales',
+                color: Colors.purple,
+                onTap: () => setState(() => _selectedIndex = 2),
+              ),
+            ],
+          ),
+          const SizedBox(height: 32),
+
+          // Materias recientes
+          if (provider.materias.isNotEmpty) ...[
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  'Materias recientes',
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.w500),
+                ),
+                TextButton(
+                  onPressed: () => setState(() => _selectedIndex = 1),
+                  child: const Text('Ver todas'),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            ...provider.materias
+                .take(3)
+                .map(
+                  (materia) => Card(
+                    margin: const EdgeInsets.only(bottom: 12),
+                    child: ListTile(
+                      leading: CircleAvatar(
+                        backgroundColor: Color(
+                          int.parse(materia.color.replaceAll('#', '0xFF')),
+                        ),
+                        child: const Icon(Icons.book, color: Colors.white),
+                      ),
+                      title: Text(materia.nombre),
+                      subtitle: Text(
+                        '${materia.alumnosIds.length} alumnos • ${materia.descripcion}',
+                      ),
+                      trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+                      onTap: () => _navegarAMateria(materia),
+                    ),
+                  ),
+                ),
+          ] else
+            Center(
+              child: Column(
+                children: [
+                  const SizedBox(height: 32),
+                  Icon(Icons.class_, size: 64, color: Colors.grey[300]),
+                  const SizedBox(height: 16),
+                  Text(
+                    'No tienes materias aún',
+                    style: TextStyle(fontSize: 18, color: Colors.grey[600]),
+                  ),
+                  const SizedBox(height: 16),
+                  FilledButton.icon(
+                    onPressed: () => _mostrarCrearMateria(context, provider),
+                    icon: const Icon(Icons.add),
+                    label: const Text('Crear tu primera materia'),
+                  ),
+                ],
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStatCard({
+    required IconData icon,
+    required String title,
+    required String value,
+    required String subtitle,
+    required Color color,
+    VoidCallback? onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        width: 200,
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.grey[200]!),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(icon, color: color, size: 32),
+            const SizedBox(height: 16),
+            Text(
+              value,
+              style: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              title,
+              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              subtitle,
+              style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -214,7 +496,46 @@ class _ProfesorHomeScreenState extends State<ProfesorHomeScreen> {
   }
 
   Widget _buildEvidenciasTab(CuadernoProvider provider) {
-    return const Center(child: Text('Módulo de Evidencias - En construcción'));
+    if (provider.materias.isEmpty) {
+      return _buildEmptyState(
+        icon: Icons.assignment,
+        title: 'Sin materias para gestionar evidencias',
+        subtitle: 'Crea una materia primero',
+        actionText: 'Crear Materia',
+        onAction: () => _mostrarCrearMateria(context, provider),
+      );
+    }
+
+    return ListView.builder(
+      padding: const EdgeInsets.all(16),
+      itemCount: provider.materias.length,
+      itemBuilder: (context, index) {
+        final m = provider.materias[index];
+        final numEvidencias = provider.evidencias
+            .where((e) => e.materiaId == m.id)
+            .length;
+        return Card(
+          margin: const EdgeInsets.only(bottom: 16),
+          child: ListTile(
+            leading: Container(
+              width: 6,
+              height: double.infinity,
+              color: Color(int.parse(m.color.replaceAll('#', '0xFF'))),
+            ),
+            title: Text(
+              m.nombre,
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
+            subtitle: Text('$numEvidencias evidencias registradas'),
+            trailing: ElevatedButton.icon(
+              icon: const Icon(Icons.assignment),
+              label: const Text('Gestionar'),
+              onPressed: () => _abrirGestionEvidencias(m),
+            ),
+          ),
+        );
+      },
+    );
   }
 
   Widget _buildReportesTab(CuadernoProvider provider) {
@@ -293,6 +614,12 @@ class _ProfesorHomeScreenState extends State<ProfesorHomeScreen> {
   void _abrirTomarAsistencia(Materia m) {
     Navigator.of(context).push(
       MaterialPageRoute(builder: (_) => TomarAsistenciaScreen(materia: m)),
+    );
+  }
+
+  void _abrirGestionEvidencias(Materia m) {
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => GestionEvidenciasScreen(materia: m)),
     );
   }
 
