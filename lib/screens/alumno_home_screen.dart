@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../models/materia.dart';
 import '../models/evidencia.dart';
 import 'alumno/alumno_evidencias_screen.dart';
+import 'alumno/calendario_alumno_widget.dart';
 
 class AlumnoHomeScreen extends StatefulWidget {
   const AlumnoHomeScreen({super.key});
@@ -373,19 +374,7 @@ class _AlumnoHomeScreenState extends State<AlumnoHomeScreen> {
   }
 
   Widget _buildCalendarioTab(CuadernoProvider provider) {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.calendar_today, size: 64, color: Colors.grey[300]),
-          const SizedBox(height: 16),
-          Text(
-            'Calendario próximamente',
-            style: TextStyle(fontSize: 18, color: Colors.grey[600]),
-          ),
-        ],
-      ),
-    );
+    return const CalendarioAlumnoWidget();
   }
 
   Widget _buildEmptyState(CuadernoProvider provider) {

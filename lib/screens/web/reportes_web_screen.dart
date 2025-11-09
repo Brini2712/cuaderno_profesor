@@ -680,128 +680,155 @@ class _ReportesWebScreenState extends State<ReportesWebScreen> {
   Future<void> _exportarPDF(ReporteEstadisticas reporte) async {
     final pdf = pw.Document();
 
+    final baseColor = PdfColors.indigo;
+    // PdfColor no soporta withOpacity directamente; crear un color claro manual.
+    final lightFill = PdfColor.fromInt(0xF0F3F9FF); // tono muy claro azulado
+
     pdf.addPage(
-      pw.Page(
+      pw.MultiPage(
         pageFormat: PdfPageFormat.a4,
-        build: (pw.Context context) {
+        margin: const pw.EdgeInsets.symmetric(horizontal: 24, vertical: 28),
+        header: (context) {
           return pw.Column(
             crossAxisAlignment: pw.CrossAxisAlignment.start,
             children: [
-              pw.Text(
-                'Reporte de Estadísticas',
-                style: pw.TextStyle(
-                  fontSize: 24,
-                  fontWeight: pw.FontWeight.bold,
+              pw.Container(
+                padding: const pw.EdgeInsets.symmetric(vertical: 4),
+                child: pw.Row(
+                  mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                  children: [
+                    pw.Text(
+                      'Reporte de Estadísticas',
+                      style: pw.TextStyle(
+                        fontSize: 18,
+                        color: baseColor,
+                        fontWeight: pw.FontWeight.bold,
+                      ),
+                    ),
+                    pw.Text(
+                      DateFormat('dd/MM/yyyy – HH:mm').format(DateTime.now()),
+                      style: const pw.TextStyle(
+                        fontSize: 10,
+                        color: PdfColors.grey700,
+                      ),
+                    ),
+                  ],
                 ),
               ),
-              pw.SizedBox(height: 8),
-              pw.Text('Materia: ${reporte.materiaNombre}'),
+              pw.Container(height: 1.2, color: baseColor),
+              pw.SizedBox(height: 6),
+              pw.Text(
+                'Materia: ${reporte.materiaNombre}',
+                style: const pw.TextStyle(fontSize: 11),
+              ),
               pw.Text(
                 'Periodo: ${DateFormat('dd/MM/yyyy').format(reporte.fechaInicio)} - ${DateFormat('dd/MM/yyyy').format(reporte.fechaFin)}',
+                style: const pw.TextStyle(fontSize: 11),
               ),
-              pw.SizedBox(height: 20),
-              pw.Text(
-                'Resumen General',
-                style: pw.TextStyle(
-                  fontSize: 18,
-                  fontWeight: pw.FontWeight.bold,
+              if (_evaluacionSeleccionada != null)
+                pw.Text(
+                  'Evaluación: ${_evaluacionSeleccionada}',
+                  style: const pw.TextStyle(fontSize: 11),
                 ),
-              ),
               pw.SizedBox(height: 10),
-              pw.Row(
-                mainAxisAlignment: pw.MainAxisAlignment.spaceAround,
-                children: [
-                  pw.Column(
-                    children: [
-                      pw.Text('Asistencia Promedio'),
-                      pw.Text(
-                        '${reporte.promedioAsistenciaGrupo.toStringAsFixed(1)}%',
-                        style: pw.TextStyle(
-                          fontSize: 20,
-                          fontWeight: pw.FontWeight.bold,
-                        ),
-                      ),
-                    ],
-                  ),
-                  pw.Column(
-                    children: [
-                      pw.Text('Evidencias Promedio'),
-                      pw.Text(
-                        '${reporte.promedioEvidenciasGrupo.toStringAsFixed(1)}%',
-                        style: pw.TextStyle(
-                          fontSize: 20,
-                          fontWeight: pw.FontWeight.bold,
-                        ),
-                      ),
-                    ],
-                  ),
-                  pw.Column(
-                    children: [
-                      pw.Text('En Riesgo'),
-                      pw.Text(
-                        '${reporte.alumnosEnRiesgo}',
-                        style: pw.TextStyle(
-                          fontSize: 20,
-                          fontWeight: pw.FontWeight.bold,
-                        ),
-                      ),
-                    ],
-                  ),
-                  pw.Column(
-                    children: [
-                      pw.Text('Exentos'),
-                      pw.Text(
-                        '${reporte.alumnosExentos}',
-                        style: pw.TextStyle(
-                          fontSize: 20,
-                          fontWeight: pw.FontWeight.bold,
-                        ),
-                      ),
-                    ],
-                  ),
-                  pw.Column(
-                    children: [
-                      pw.Text('Ordinaria'),
-                      pw.Text(
-                        '${reporte.alumnosConOrdinaria}',
-                        style: pw.TextStyle(
-                          fontSize: 20,
-                          fontWeight: pw.FontWeight.bold,
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-              pw.SizedBox(height: 20),
-              pw.Text(
-                'Detalle por Alumno',
-                style: pw.TextStyle(
-                  fontSize: 18,
-                  fontWeight: pw.FontWeight.bold,
+            ],
+          );
+        },
+        footer: (context) => pw.Align(
+          alignment: pw.Alignment.centerRight,
+          child: pw.Text(
+            'Página ${context.pageNumber} de ${context.pagesCount}',
+            style: const pw.TextStyle(fontSize: 10, color: PdfColors.grey700),
+          ),
+        ),
+        build: (pw.Context context) {
+          return [
+            // Resumen en tarjetas
+            pw.Wrap(
+              spacing: 10,
+              runSpacing: 10,
+              children: [
+                _kpiBox(
+                  'Asistencia Promedio',
+                  '${reporte.promedioAsistenciaGrupo.toStringAsFixed(1)}%',
+                  baseColor,
+                  lightFill,
                 ),
+                _kpiBox(
+                  'Evidencias Promedio',
+                  '${reporte.promedioEvidenciasGrupo.toStringAsFixed(1)}%',
+                  baseColor,
+                  lightFill,
+                ),
+                _kpiBox(
+                  'En Riesgo',
+                  '${reporte.alumnosEnRiesgo}',
+                  baseColor,
+                  lightFill,
+                ),
+                _kpiBox(
+                  'Exentos',
+                  '${reporte.alumnosExentos}',
+                  baseColor,
+                  lightFill,
+                ),
+                _kpiBox(
+                  'Ordinaria',
+                  '${reporte.alumnosConOrdinaria}',
+                  baseColor,
+                  lightFill,
+                ),
+              ],
+            ),
+            pw.SizedBox(height: 18),
+
+            pw.Text(
+              'Detalle por Alumno',
+              style: pw.TextStyle(
+                fontSize: 14,
+                color: baseColor,
+                fontWeight: pw.FontWeight.bold,
               ),
-              pw.SizedBox(height: 10),
-              pw.Table.fromTextArray(
-                headers: [
-                  'Alumno',
-                  'Asistencia',
-                  'Evidencias',
-                  'Eval. Reprobadas',
-                  'Estado',
-                ],
-                data: reporte.estadisticasAlumnos.map((alumno) {
-                  return [
+            ),
+            pw.SizedBox(height: 8),
+
+            pw.Table.fromTextArray(
+              headers: const [
+                'Alumno',
+                'Asistencia',
+                'Evidencias',
+                'Eval. Reprobadas',
+                'Estado',
+              ],
+              data: [
+                for (final alumno in reporte.estadisticasAlumnos)
+                  [
                     alumno.alumnoNombre,
                     '${alumno.porcentajeAsistencia.toStringAsFixed(1)}%',
                     '${alumno.porcentajeEvidencias.toStringAsFixed(1)}%',
                     '${alumno.evaluacionesReprobadas}/3',
                     alumno.estadoGeneral,
-                  ];
-                }).toList(),
+                  ],
+              ],
+              headerStyle: pw.TextStyle(
+                color: PdfColors.white,
+                fontWeight: pw.FontWeight.bold,
               ),
-            ],
-          );
+              headerDecoration: pw.BoxDecoration(color: baseColor),
+              cellStyle: const pw.TextStyle(fontSize: 10),
+              cellAlignment: pw.Alignment.centerLeft,
+              headerAlignment: pw.Alignment.centerLeft,
+              oddRowDecoration: pw.BoxDecoration(color: lightFill),
+              border: null,
+              columnWidths: {
+                0: const pw.FlexColumnWidth(2.2),
+                1: const pw.FlexColumnWidth(1),
+                2: const pw.FlexColumnWidth(1),
+                3: const pw.FlexColumnWidth(1.2),
+                4: const pw.FlexColumnWidth(1.2),
+              },
+            ),
+          ];
         },
       ),
     );
@@ -811,28 +838,80 @@ class _ReportesWebScreenState extends State<ReportesWebScreen> {
     );
   }
 
-  void _exportarCSV(ReporteEstadisticas reporte) {
-    final List<List<dynamic>> rows = [
-      [
-        'Alumno',
-        'Asistencia (%)',
-        'Evidencias (%)',
-        'Evaluaciones Reprobadas',
-        'Estado',
-      ],
-      ...reporte.estadisticasAlumnos.map(
-        (alumno) => [
-          alumno.alumnoNombre,
-          alumno.porcentajeAsistencia.toStringAsFixed(1),
-          alumno.porcentajeEvidencias.toStringAsFixed(1),
-          '${alumno.evaluacionesReprobadas}/3',
-          alumno.estadoGeneral,
+  pw.Widget _kpiBox(String title, String value, PdfColor color, PdfColor fill) {
+    return pw.Container(
+      width: 150,
+      padding: const pw.EdgeInsets.all(10),
+      decoration: pw.BoxDecoration(
+        color: fill,
+        borderRadius: pw.BorderRadius.circular(8),
+        // Simular opacidad reduciendo intensidad mezclando con blanco
+        border: pw.Border.all(color: PdfColor.fromInt(0xD5D9E6FF), width: 0.8),
+      ),
+      child: pw.Column(
+        crossAxisAlignment: pw.CrossAxisAlignment.start,
+        children: [
+          pw.Text(
+            title,
+            style: const pw.TextStyle(fontSize: 10, color: PdfColors.grey700),
+          ),
+          pw.SizedBox(height: 4),
+          pw.Text(
+            value,
+            style: pw.TextStyle(
+              fontSize: 16,
+              fontWeight: pw.FontWeight.bold,
+              color: color,
+            ),
+          ),
         ],
       ),
-    ];
+    );
+  }
 
-    final String csv = const ListToCsvConverter().convert(rows);
-    final bytes = utf8.encode(csv);
+  void _exportarCSV(ReporteEstadisticas reporte) {
+    final List<List<dynamic>> rows = [];
+
+    // Metadatos al inicio (compatibles con Excel/Sheets)
+    rows.add(['Reporte de Estadísticas']);
+    rows.add(['Materia', reporte.materiaNombre]);
+    rows.add([
+      'Periodo',
+      '${DateFormat('dd/MM/yyyy').format(reporte.fechaInicio)} - ${DateFormat('dd/MM/yyyy').format(reporte.fechaFin)}',
+    ]);
+    if (_evaluacionSeleccionada != null) {
+      rows.add(['Evaluación', _evaluacionSeleccionada]);
+    }
+    rows.add([]); // línea en blanco
+
+    // Encabezados de la tabla
+    rows.add([
+      'Alumno',
+      'Asistencia (%)',
+      'Evidencias (%)',
+      'Evaluaciones Reprobadas',
+      'Estado',
+    ]);
+
+    // Datos
+    for (final alumno in reporte.estadisticasAlumnos) {
+      rows.add([
+        alumno.alumnoNombre,
+        alumno.porcentajeAsistencia.toStringAsFixed(1),
+        alumno.porcentajeEvidencias.toStringAsFixed(1),
+        '${alumno.evaluacionesReprobadas}/3',
+        alumno.estadoGeneral,
+      ]);
+    }
+
+    // Usar ; como separador y BOM UTF-8 para compatibilidad con Excel (acentos)
+    final converter = const ListToCsvConverter(
+      fieldDelimiter: ';',
+      textDelimiter: '"',
+      eol: '\r\n',
+    );
+    final String csv = converter.convert(rows);
+    final bytes = utf8.encode('\uFEFF' + csv); // BOM + CSV
     final blob = html.Blob([bytes]);
     final url = html.Url.createObjectUrlFromBlob(blob);
     html.AnchorElement(href: url)
