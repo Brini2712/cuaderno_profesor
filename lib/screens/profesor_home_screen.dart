@@ -8,6 +8,8 @@ import 'profesor/tomar_asistencia_screen.dart';
 import 'profesor/detalle_materia_screen.dart';
 import 'profesor/materia_search_delegate.dart';
 import 'profesor/gestion_evidencias_screen.dart';
+import 'perfil_screen.dart';
+import 'configuracion_screen.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter/services.dart';
 
@@ -80,7 +82,14 @@ class _ProfesorHomeScreenState extends State<ProfesorHomeScreen> {
                         children: [
                           IconButton(
                             icon: const Icon(Icons.settings_outlined),
-                            onPressed: () {},
+                            onPressed: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (ctx) => const ConfiguracionScreen(),
+                                ),
+                              );
+                            },
                             tooltip: 'Ajustes',
                           ),
                           const SizedBox(height: 8),
@@ -88,6 +97,13 @@ class _ProfesorHomeScreenState extends State<ProfesorHomeScreen> {
                             onSelected: (value) {
                               if (value == 'logout') {
                                 _cerrarSesion(provider);
+                              } else if (value == 'profile') {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (ctx) => const PerfilScreen(),
+                                  ),
+                                );
                               }
                             },
                             itemBuilder: (context) => [

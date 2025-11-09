@@ -829,6 +829,35 @@ class CuadernoProvider extends ChangeNotifier {
     _calificacionesSub?.cancel();
   }
 
+  // Actualizar perfil de usuario
+  Future<void> actualizarPerfil({String? nombre, String? fotoUrl}) async {
+    if (_usuario == null) return;
+
+    try {
+      final Map<String, dynamic> updates = {};
+      if (nombre != null && nombre.isNotEmpty) {
+        updates['nombre'] = nombre;
+      }
+      if (fotoUrl != null) {
+        updates['fotoUrl'] = fotoUrl;
+      }
+
+      if (updates.isEmpty) return;
+
+      await _firestore.collection('usuarios').doc(_usuario!.id).update(updates);
+
+      // Actualizar el objeto local
+      _usuario = _usuario!.copyWith(
+        nombre: nombre ?? _usuario!.nombre,
+        fotoUrl: fotoUrl ?? _usuario!.fotoUrl,
+      );
+      notifyListeners();
+    } catch (e) {
+      _lastError = 'Error actualizando perfil: $e';
+      rethrow;
+    }
+  }
+
   @override
   void dispose() {
     _cancelSubscriptions();
