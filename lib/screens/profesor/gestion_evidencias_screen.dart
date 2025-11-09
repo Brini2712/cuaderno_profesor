@@ -15,8 +15,10 @@ class GestionEvidenciasScreen extends StatefulWidget {
 }
 
 class _GestionEvidenciasScreenState extends State<GestionEvidenciasScreen> {
-  EstadoEvidencia? _filtroEstado;
-  TipoEvidencia? _filtroTipo;
+  final _scaffoldKey = GlobalKey<ScaffoldState>();
+  // Multiselección
+  final Set<EstadoEvidencia> _estadosSeleccionados = {};
+  final Set<TipoEvidencia> _tiposSeleccionados = {};
 
   @override
   Widget build(BuildContext context) {
@@ -35,92 +37,47 @@ class _GestionEvidenciasScreenState extends State<GestionEvidenciasScreen> {
 
     final evidenciasUnicas = evidenciasAgrupadas.values.toList();
 
+    bool coincideEstadosSeleccionados(Evidencia e) {
+      if (_estadosSeleccionados.isEmpty) return true;
+      final instancias = todasEvidencias.where((x) => x.titulo == e.titulo);
+      // Debe coincidir con AL MENOS uno de los estados seleccionados
+      for (final estado in _estadosSeleccionados) {
+        if (instancias.any((x) => x.estado == estado)) return true;
+      }
+      return false;
+    }
+
+    bool coincideTiposSeleccionados(Evidencia e) {
+      return _tiposSeleccionados.isEmpty ||
+          _tiposSeleccionados.contains(e.tipo);
+    }
+
     final evidenciasFiltradas = evidenciasUnicas.where((e) {
-      if (_filtroEstado != null && e.estado != _filtroEstado) return false;
-      if (_filtroTipo != null && e.tipo != _filtroTipo) return false;
+      if (!coincideEstadosSeleccionados(e)) return false;
+      if (!coincideTiposSeleccionados(e)) return false;
       return true;
     }).toList();
 
     return Scaffold(
+      key: _scaffoldKey,
       appBar: AppBar(
         title: Text('Evidencias - ${widget.materia.nombre}'),
         actions: [
-          PopupMenuButton<String>(
+          IconButton(
+            tooltip: 'Filtros',
             icon: const Icon(Icons.filter_list),
-            onSelected: (v) {
-              setState(() {
-                if (v == 'todos') {
-                  _filtroEstado = null;
-                  _filtroTipo = null;
-                } else if (v == 'asignado') {
-                  _filtroEstado = EstadoEvidencia.asignado;
-                } else if (v == 'entregado') {
-                  _filtroEstado = EstadoEvidencia.entregado;
-                } else if (v == 'calificado') {
-                  _filtroEstado = EstadoEvidencia.calificado;
-                } else if (v == 'devuelto') {
-                  _filtroEstado = EstadoEvidencia.devuelto;
-                } else if (v == 'portafolio') {
-                  _filtroTipo = TipoEvidencia.portafolio;
-                  _filtroEstado = null;
-                } else if (v == 'actividad') {
-                  _filtroTipo = TipoEvidencia.actividad;
-                  _filtroEstado = null;
-                } else if (v == 'examen') {
-                  _filtroTipo = TipoEvidencia.examen;
-                  _filtroEstado = null;
-                }
-              });
-            },
-            itemBuilder: (ctx) => [
-              const PopupMenuItem(value: 'todos', child: Text('Todos')),
-              const PopupMenuDivider(),
-              const PopupMenuItem(value: 'asignado', child: Text('Asignados')),
-              const PopupMenuItem(
-                value: 'entregado',
-                child: Text('Entregados'),
-              ),
-              const PopupMenuItem(
-                value: 'calificado',
-                child: Text('Calificados'),
-              ),
-              const PopupMenuItem(value: 'devuelto', child: Text('Devueltos')),
-              const PopupMenuDivider(),
-              const PopupMenuItem(
-                value: 'portafolio',
-                child: Text('Portafolio'),
-              ),
-              const PopupMenuItem(value: 'actividad', child: Text('Actividad')),
-              const PopupMenuItem(value: 'examen', child: Text('Examen')),
-            ],
+            onPressed: () => _scaffoldKey.currentState?.openEndDrawer(),
           ),
         ],
       ),
+      endDrawer: _buildFiltrosDrawer(),
       body: evidenciasFiltradas.isEmpty
-          ? Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.assignment, size: 64, color: Colors.grey[400]),
-                  const SizedBox(height: 16),
-                  Text(
-                    'Sin evidencias registradas',
-                    style: TextStyle(color: Colors.grey[600]),
-                  ),
-                  if (todasEvidencias.isNotEmpty &&
-                      evidenciasFiltradas.isEmpty) ...[
-                    const SizedBox(height: 8),
-                    Text(
-                      'Prueba cambiar el filtro',
-                      style: TextStyle(color: Colors.grey[500], fontSize: 12),
-                    ),
-                  ],
-                ],
-              ),
+          ? const Center(
+              child: Text('No hay evidencias para los filtros seleccionados'),
             )
-          : ListView.builder(
-              padding: const EdgeInsets.all(16),
+          : ListView.separated(
               itemCount: evidenciasFiltradas.length,
+              separatorBuilder: (_, __) => const Divider(height: 1),
               itemBuilder: (ctx, i) {
                 final ev = evidenciasFiltradas[i];
 
@@ -136,63 +93,54 @@ class _GestionEvidenciasScreenState extends State<GestionEvidenciasScreen> {
                           e.estado == EstadoEvidencia.calificado,
                     )
                     .length;
-                final calificadas = todasInstancias
+                final calificados = todasInstancias
                     .where((e) => e.estado == EstadoEvidencia.calificado)
                     .length;
 
-                return Card(
-                  margin: const EdgeInsets.only(bottom: 12),
-                  child: ListTile(
-                    leading: CircleAvatar(
-                      backgroundColor: _colorPorTipo(ev.tipo),
-                      child: Icon(_iconoPorTipo(ev.tipo), color: Colors.white),
+                return ListTile(
+                  leading: CircleAvatar(
+                    backgroundColor: _colorPorTipo(ev.tipo).withOpacity(0.15),
+                    child: Icon(
+                      _iconoPorTipo(ev.tipo),
+                      color: _colorPorTipo(ev.tipo),
                     ),
-                    title: Text(ev.titulo),
-                    subtitle: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          '${_labelTipo(ev.tipo)} • Puntos: ${ev.puntosTotales.toInt()}',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Colors.grey[600],
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          'Entregadas: $entregadas/$totalAlumnos • Calificadas: $calificadas/$totalAlumnos',
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w500,
-                            color: Colors.grey[700],
-                          ),
-                        ),
-                      ],
-                    ),
-                    trailing: PopupMenuButton<String>(
-                      onSelected: (v) {
-                        if (v == 'editar') _editarEvidencia(ev);
-                        if (v == 'eliminar') _confirmarEliminar(ev);
-                      },
-                      itemBuilder: (ctx) => const [
-                        PopupMenuItem(value: 'editar', child: Text('Editar')),
-                        PopupMenuItem(
-                          value: 'eliminar',
-                          child: Text('Eliminar'),
-                        ),
-                      ],
-                    ),
-                    onTap: () {
-                      Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (_) => DetalleEvidenciaProfesorScreen(
-                            materia: widget.materia,
-                            tituloEvidencia: ev.titulo,
-                          ),
-                        ),
-                      );
-                    },
                   ),
+                  title: Text(
+                    ev.titulo,
+                    style: const TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                  subtitle: Row(
+                    children: [
+                      Text(
+                        'Entregadas: $entregadas/$totalAlumnos  ·  Calificadas: $calificados',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                          color: Colors.grey[700],
+                        ),
+                      ),
+                    ],
+                  ),
+                  trailing: PopupMenuButton<String>(
+                    onSelected: (v) {
+                      if (v == 'editar') _editarEvidencia(ev);
+                      if (v == 'eliminar') _confirmarEliminar(ev);
+                    },
+                    itemBuilder: (ctx) => const [
+                      PopupMenuItem(value: 'editar', child: Text('Editar')),
+                      PopupMenuItem(value: 'eliminar', child: Text('Eliminar')),
+                    ],
+                  ),
+                  onTap: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => DetalleEvidenciaProfesorScreen(
+                          materia: widget.materia,
+                          tituloEvidencia: ev.titulo,
+                        ),
+                      ),
+                    );
+                  },
                 );
               },
             ),
@@ -226,14 +174,184 @@ class _GestionEvidenciasScreenState extends State<GestionEvidenciasScreen> {
     }
   }
 
-  String _labelTipo(TipoEvidencia t) {
-    switch (t) {
-      case TipoEvidencia.portafolio:
-        return 'Portafolio';
-      case TipoEvidencia.actividad:
-        return 'Actividad';
-      case TipoEvidencia.examen:
-        return 'Examen';
+  // Drawer lateral con filtros de Estado y Tipo
+  Widget _buildFiltrosDrawer() {
+    // Recalcular estadísticas rápidas para chips (agrupado por título)
+    final provider = context.watch<CuadernoProvider>();
+    final todas = provider.evidencias
+        .where((e) => e.materiaId == widget.materia.id)
+        .toList();
+    final agrupadas = <String, Evidencia>{};
+    for (final e in todas) {
+      agrupadas.putIfAbsent(e.titulo, () => e);
+    }
+    final unicas = agrupadas.values.toList();
+
+    // Cuenta títulos que tienen al menos una instancia en ese estado
+    int countEstado(EstadoEvidencia estado) {
+      final titulos = <String>{};
+      for (final e in todas) {
+        if (e.estado == estado) titulos.add(e.titulo);
+      }
+      return titulos.length;
+    }
+
+    int countTipo(TipoEvidencia tipo) =>
+        unicas.where((e) => e.tipo == tipo).length;
+
+    final total = unicas.length;
+    final asignados = countEstado(EstadoEvidencia.asignado);
+    final entregados = countEstado(EstadoEvidencia.entregado);
+    final calificados = countEstado(EstadoEvidencia.calificado);
+    final devueltos = countEstado(EstadoEvidencia.devuelto);
+
+    final portafolio = countTipo(TipoEvidencia.portafolio);
+    final actividad = countTipo(TipoEvidencia.actividad);
+    final examen = countTipo(TipoEvidencia.examen);
+
+    return Drawer(
+      child: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    'Filtros',
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
+                  ),
+                  IconButton(
+                    tooltip: 'Cerrar',
+                    icon: const Icon(Icons.close),
+                    onPressed: () => Navigator.of(context).maybePop(),
+                  ),
+                ],
+              ),
+              Text(
+                'Total evidencias: $total',
+                style: TextStyle(color: Colors.grey[700]),
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                'Estado',
+                style: TextStyle(fontWeight: FontWeight.w500),
+              ),
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  FilterChip(
+                    label: Text('Asignados ($asignados)'),
+                    selected: _estadosSeleccionados.contains(
+                      EstadoEvidencia.asignado,
+                    ),
+                    onSelected: (_) =>
+                        setState(() => _toggleEstado(EstadoEvidencia.asignado)),
+                  ),
+                  FilterChip(
+                    label: Text('Entregados ($entregados)'),
+                    selected: _estadosSeleccionados.contains(
+                      EstadoEvidencia.entregado,
+                    ),
+                    onSelected: (_) => setState(
+                      () => _toggleEstado(EstadoEvidencia.entregado),
+                    ),
+                  ),
+                  FilterChip(
+                    label: Text('Calificados ($calificados)'),
+                    selected: _estadosSeleccionados.contains(
+                      EstadoEvidencia.calificado,
+                    ),
+                    onSelected: (_) => setState(
+                      () => _toggleEstado(EstadoEvidencia.calificado),
+                    ),
+                  ),
+                  FilterChip(
+                    label: Text('Devueltos ($devueltos)'),
+                    selected: _estadosSeleccionados.contains(
+                      EstadoEvidencia.devuelto,
+                    ),
+                    onSelected: (_) =>
+                        setState(() => _toggleEstado(EstadoEvidencia.devuelto)),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              const Text('Tipo', style: TextStyle(fontWeight: FontWeight.w500)),
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  FilterChip(
+                    label: Text('Portafolio ($portafolio)'),
+                    selected: _tiposSeleccionados.contains(
+                      TipoEvidencia.portafolio,
+                    ),
+                    onSelected: (_) =>
+                        setState(() => _toggleTipo(TipoEvidencia.portafolio)),
+                  ),
+                  FilterChip(
+                    label: Text('Actividad ($actividad)'),
+                    selected: _tiposSeleccionados.contains(
+                      TipoEvidencia.actividad,
+                    ),
+                    onSelected: (_) =>
+                        setState(() => _toggleTipo(TipoEvidencia.actividad)),
+                  ),
+                  FilterChip(
+                    label: Text('Examen ($examen)'),
+                    selected: _tiposSeleccionados.contains(
+                      TipoEvidencia.examen,
+                    ),
+                    onSelected: (_) =>
+                        setState(() => _toggleTipo(TipoEvidencia.examen)),
+                  ),
+                ],
+              ),
+              const Spacer(),
+              Row(
+                children: [
+                  OutlinedButton(
+                    onPressed: () {
+                      setState(() {
+                        _estadosSeleccionados.clear();
+                        _tiposSeleccionados.clear();
+                      });
+                    },
+                    child: const Text('Limpiar'),
+                  ),
+                  const SizedBox(width: 8),
+                  FilledButton(
+                    onPressed: () => Navigator.of(context).maybePop(),
+                    child: const Text('Aplicar'),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _toggleEstado(EstadoEvidencia e) {
+    if (_estadosSeleccionados.contains(e)) {
+      _estadosSeleccionados.remove(e);
+    } else {
+      _estadosSeleccionados.add(e);
+    }
+  }
+
+  void _toggleTipo(TipoEvidencia t) {
+    if (_tiposSeleccionados.contains(t)) {
+      _tiposSeleccionados.remove(t);
+    } else {
+      _tiposSeleccionados.add(t);
     }
   }
 

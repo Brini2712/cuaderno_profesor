@@ -45,342 +45,400 @@ class _DetalleEvidenciaAlumnoScreenState
         widget.evidencia.estado != EstadoEvidencia.asignado &&
         widget.evidencia.estado != EstadoEvidencia.devuelto;
     final fueDevuelto = widget.evidencia.estado == EstadoEvidencia.devuelto;
+    final width = MediaQuery.of(context).size.width;
+    final usarLayoutDesktop = width > 900;
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Detalle de evidencia'),
-        actions: [
-          if (!estaEntregado || fueDevuelto)
-            FilledButton(
-              onPressed: _guardando ? null : _entregar,
-              child: _guardando
-                  ? const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : Text(fueDevuelto ? 'Reenviar' : 'Entregar'),
-            ),
-          const SizedBox(width: 16),
-        ],
+        title: Text(widget.evidencia.titulo),
+        backgroundColor: Colors.white,
+        foregroundColor: Colors.black87,
+        elevation: 1,
       ),
-      body: ListView(
-        children: [
-          // Header con estado
-          Container(
-            padding: const EdgeInsets.all(24),
-            color: _getColorEstado(widget.evidencia.estado).withOpacity(0.1),
+      body: usarLayoutDesktop
+          ? Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Columna principal (instrucciones)
+                Expanded(flex: 2, child: _buildInstrucciones()),
+                // Panel lateral derecho (tu trabajo)
+                Container(
+                  width: 360,
+                  decoration: BoxDecoration(
+                    color: Colors.grey[50],
+                    border: Border(left: BorderSide(color: Colors.grey[300]!)),
+                  ),
+                  child: _buildPanelTrabajo(estaEntregado, fueDevuelto),
+                ),
+              ],
+            )
+          : ListView(
+              children: [
+                _buildInstrucciones(),
+                const Divider(height: 1),
+                _buildPanelTrabajo(estaEntregado, fueDevuelto),
+              ],
+            ),
+    );
+  }
+
+  Widget _buildInstrucciones() {
+    return ListView(
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+      children: [
+        // Título grande
+        Text(
+          widget.evidencia.titulo,
+          style: const TextStyle(
+            fontSize: 28,
+            fontWeight: FontWeight.w400,
+            letterSpacing: 0,
+          ),
+        ),
+        const SizedBox(height: 12),
+        // Línea puntos + fecha (fecha alineada a la derecha estilo Classroom)
+        Row(
+          children: [
+            Text(
+              '${widget.evidencia.puntosTotales.toInt()} puntos',
+              style: TextStyle(fontSize: 14, color: Colors.grey[700]),
+            ),
+            const Spacer(),
+            Text(
+              'Fecha de entrega: ${_formatearFecha(widget.evidencia.fechaEntrega)}',
+              style: TextStyle(fontSize: 14, color: Colors.grey[700]),
+            ),
+          ],
+        ),
+        const SizedBox(height: 32),
+        // Descripción/instrucciones
+        Text(
+          widget.evidencia.descripcion.isEmpty
+              ? 'Sin instrucciones adicionales'
+              : widget.evidencia.descripcion,
+          style: const TextStyle(fontSize: 16, height: 1.5),
+        ),
+        const SizedBox(height: 40),
+        // Comentarios de la clase (placeholder)
+        const Divider(height: 1),
+        const SizedBox(height: 24),
+        Row(
+          children: [
+            Icon(Icons.chat_bubble_outline, size: 18, color: Colors.grey[700]),
+            const SizedBox(width: 8),
+            Text(
+              'Comentarios de la clase',
+              style: TextStyle(fontSize: 14, color: Colors.grey[800]),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        TextButton.icon(
+          onPressed: () {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Comentarios de la clase próximamente'),
+                duration: Duration(seconds: 2),
+              ),
+            );
+          },
+          icon: const Icon(Icons.add_comment_outlined, size: 18),
+          label: const Text('Añadir comentario'),
+          style: TextButton.styleFrom(foregroundColor: Colors.blue[700]),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildPanelTrabajo(bool estaEntregado, bool fueDevuelto) {
+    final estado = widget.evidencia.estado;
+    return ListView(
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+      children: [
+        // CARD: Tu trabajo
+        Card(
+          elevation: 0,
+          shape: RoundedRectangleBorder(
+            side: BorderSide(color: Colors.grey[300]!),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(20),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Icon(
-                      _getIconoEstado(widget.evidencia.estado),
-                      color: _getColorEstado(widget.evidencia.estado),
-                      size: 32,
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            widget.evidencia.titulo,
-                            style: const TextStyle(
-                              fontSize: 24,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          Text(
-                            _getLabelEstado(widget.evidencia.estado),
-                            style: TextStyle(
-                              color: _getColorEstado(widget.evidencia.estado),
-                              fontSize: 14,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ],
+                    const Text(
+                      'Tu trabajo',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w500,
                       ),
                     ),
+                    _estadoChip(estado),
                   ],
                 ),
                 const SizedBox(height: 16),
-                Row(
-                  children: [
-                    _buildInfoChip(
-                      icon: Icons.calendar_today,
-                      label:
-                          'Entrega: ${widget.evidencia.fechaEntrega.day}/${widget.evidencia.fechaEntrega.month}',
-                    ),
-                    const SizedBox(width: 8),
-                    _buildInfoChip(
-                      icon: Icons.assessment,
-                      label: '${widget.evidencia.puntosTotales} puntos',
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-          const Divider(height: 1),
-
-          // Instrucciones
-          Padding(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Instrucciones',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  widget.evidencia.descripcion.isEmpty
-                      ? 'Sin instrucciones adicionales'
-                      : widget.evidencia.descripcion,
-                  style: const TextStyle(fontSize: 16),
-                ),
-              ],
-            ),
-          ),
-
-          // Si ya está entregado, mostrar calificación
-          if (widget.evidencia.estado == EstadoEvidencia.calificado) ...[
-            const Divider(height: 1),
-            Container(
-              padding: const EdgeInsets.all(24),
-              color: Colors.green.withOpacity(0.05),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Row(
-                    children: [
-                      Icon(Icons.grade, color: Colors.green),
-                      SizedBox(width: 8),
-                      Text(
-                        'Calificación',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
+                if (estado == EstadoEvidencia.calificado &&
+                    widget.evidencia.calificacionNumerica != null) ...[
                   Text(
-                    '${widget.evidencia.calificacionNumerica!.toStringAsFixed(1)} / ${widget.evidencia.puntosTotales}',
-                    style: const TextStyle(
-                      fontSize: 32,
+                    '${widget.evidencia.calificacionNumerica!.toStringAsFixed(1)} / ${widget.evidencia.puntosTotales.toStringAsFixed(0)}',
+                    style: TextStyle(
+                      fontSize: 22,
                       fontWeight: FontWeight.bold,
-                      color: Colors.green,
+                      color: Colors.green[700],
                     ),
                   ),
-                  if (widget.evidencia.comentarioProfesor != null &&
-                      widget.evidencia.comentarioProfesor!.isNotEmpty) ...[
-                    const SizedBox(height: 16),
-                    const Text(
-                      'Comentarios del profesor:',
-                      style: TextStyle(fontWeight: FontWeight.w500),
-                    ),
-                    const SizedBox(height: 8),
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: Colors.grey[300]!),
-                      ),
-                      child: Text(widget.evidencia.comentarioProfesor!),
-                    ),
-                  ],
+                  const SizedBox(height: 20),
                 ],
-              ),
-            ),
-          ],
-
-          // Si fue devuelto, mostrar mensaje
-          if (fueDevuelto) ...[
-            const Divider(height: 1),
-            Container(
-              padding: const EdgeInsets.all(24),
-              color: Colors.orange.withOpacity(0.1),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Row(
-                    children: [
-                      Icon(Icons.assignment_return, color: Colors.orange),
-                      SizedBox(width: 8),
-                      Text(
-                        'Trabajo devuelto para corrección',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.orange,
+                if (fueDevuelto)
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.orange[50],
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.orange[200]!),
+                    ),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Icon(
+                          Icons.assignment_return,
+                          color: Colors.orange[700],
                         ),
-                      ),
-                    ],
-                  ),
-                  if (widget.evidencia.comentarioProfesor != null &&
-                      widget.evidencia.comentarioProfesor!.isNotEmpty) ...[
-                    const SizedBox(height: 12),
-                    Text(widget.evidencia.comentarioProfesor!),
-                  ],
-                ],
-              ),
-            ),
-          ],
-
-          const Divider(height: 1),
-
-          // Formulario de entrega (si no está calificado)
-          if (widget.evidencia.estado != EstadoEvidencia.calificado)
-            Padding(
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Tu trabajo',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 16),
-                  TextFormField(
-                    controller: _comentarioCtrl,
-                    decoration: const InputDecoration(
-                      labelText: 'Comentario (opcional)',
-                      hintText:
-                          'Añade cualquier aclaración sobre tu trabajo...',
-                      border: OutlineInputBorder(),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Trabajo devuelto',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.orange[900],
+                                ),
+                              ),
+                              if (widget.evidencia.comentarioProfesor != null &&
+                                  widget
+                                      .evidencia
+                                      .comentarioProfesor!
+                                      .isNotEmpty) ...[
+                                const SizedBox(height: 8),
+                                Text(
+                                  widget.evidencia.comentarioProfesor!,
+                                  style: TextStyle(color: Colors.orange[900]),
+                                ),
+                              ],
+                            ],
+                          ),
+                        ),
+                      ],
                     ),
-                    maxLines: 3,
-                    enabled: !estaEntregado || fueDevuelto,
                   ),
-                  const SizedBox(height: 16),
-                  TextFormField(
-                    controller: _enlaceCtrl,
-                    decoration: const InputDecoration(
-                      labelText: 'Enlace externo (opcional)',
-                      hintText: 'https://...',
-                      border: OutlineInputBorder(),
-                      prefixIcon: Icon(Icons.link),
-                    ),
-                    enabled: !estaEntregado || fueDevuelto,
-                  ),
-                  const SizedBox(height: 16),
+                if (fueDevuelto) const SizedBox(height: 16),
+                if (!estaEntregado || fueDevuelto)
                   OutlinedButton.icon(
-                    onPressed: estaEntregado && !fueDevuelto
-                        ? null
-                        : _agregarArchivo,
-                    icon: const Icon(Icons.attach_file),
-                    label: const Text('Adjuntar archivo'),
+                    onPressed: _agregarArchivo,
+                    icon: const Icon(Icons.add),
+                    label: const Text('Añadir o crear'),
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 20,
+                        vertical: 16,
+                      ),
+                      side: BorderSide(color: Colors.grey[400]!),
+                    ),
                   ),
-                  if (_archivosAdjuntos.isNotEmpty) ...[
-                    const SizedBox(height: 8),
-                    ..._archivosAdjuntos.map(
-                      (archivo) => ListTile(
-                        leading: const Icon(Icons.insert_drive_file),
+                if (_archivosAdjuntos.isNotEmpty) ...[
+                  const SizedBox(height: 16),
+                  ..._archivosAdjuntos.map(
+                    (archivo) => Card(
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                        side: BorderSide(color: Colors.grey[300]!),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      margin: const EdgeInsets.only(bottom: 8),
+                      child: ListTile(
+                        leading: Icon(
+                          Icons.insert_drive_file,
+                          color: Colors.blue[700],
+                        ),
                         title: Text(archivo.split('/').last),
-                        trailing: estaEntregado && !fueDevuelto
-                            ? null
-                            : IconButton(
+                        trailing: (!estaEntregado || fueDevuelto)
+                            ? IconButton(
                                 icon: const Icon(Icons.close),
                                 onPressed: () {
                                   setState(() {
                                     _archivosAdjuntos.remove(archivo);
                                   });
                                 },
-                              ),
+                              )
+                            : null,
                       ),
                     ),
-                  ],
+                  ),
                 ],
-              ),
+                if (_enlaceCtrl.text.isNotEmpty ||
+                    (!estaEntregado || fueDevuelto)) ...[
+                  const SizedBox(height: 16),
+                  TextFormField(
+                    controller: _enlaceCtrl,
+                    decoration: InputDecoration(
+                      hintText: 'Añadir enlace',
+                      prefixIcon: const Icon(Icons.link),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      filled: true,
+                      fillColor: Colors.white,
+                    ),
+                    enabled: !estaEntregado || fueDevuelto,
+                  ),
+                ],
+                const SizedBox(height: 20),
+                if (!estaEntregado || fueDevuelto)
+                  FilledButton(
+                    onPressed: _guardando ? null : _entregar,
+                    style: FilledButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      backgroundColor: Colors.blue[700],
+                    ),
+                    child: _guardando
+                        ? const SizedBox(
+                            height: 20,
+                            width: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
+                          )
+                        : Text(
+                            fueDevuelto ? 'Reenviar' : 'Marcar como completado',
+                            style: const TextStyle(fontSize: 16),
+                          ),
+                  )
+                else if (estado == EstadoEvidencia.calificado ||
+                    estado == EstadoEvidencia.entregado)
+                  OutlinedButton(
+                    onPressed: _guardando ? null : _anularEntrega,
+                    child: const Text('Volver a entregar'),
+                  ),
+                if (estaEntregado &&
+                    !fueDevuelto &&
+                    widget.evidencia.fechaEntregaAlumno != null) ...[
+                  const SizedBox(height: 12),
+                  Text(
+                    'Entregado el ${_formatearFecha(widget.evidencia.fechaEntregaAlumno!)}',
+                    style: TextStyle(color: Colors.grey[600], fontSize: 13),
+                  ),
+                ],
+              ],
             ),
-
-          // Mostrar trabajo entregado si ya fue enviado
-          if (estaEntregado &&
-              widget.evidencia.estado != EstadoEvidencia.calificado &&
-              !fueDevuelto)
-            Padding(
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
+          ),
+        ),
+        const SizedBox(height: 24),
+        // CARD: Comentarios privados
+        Card(
+          elevation: 0,
+          shape: RoundedRectangleBorder(
+            side: BorderSide(color: Colors.grey[300]!),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Comentarios privados',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+                ),
+                const SizedBox(height: 12),
+                TextFormField(
+                  controller: _comentarioCtrl,
+                  decoration: InputDecoration(
+                    hintText: 'Añade un comentario privado para tu profesor',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    filled: true,
+                    fillColor: Colors.white,
+                  ),
+                  maxLines: 3,
+                  enabled: !estaEntregado || fueDevuelto,
+                ),
+                if (estado == EstadoEvidencia.calificado &&
+                    widget.evidencia.comentarioProfesor != null &&
+                    widget.evidencia.comentarioProfesor!.isNotEmpty) ...[
+                  const SizedBox(height: 20),
                   const Text(
-                    'Tu trabajo entregado',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                    'Comentario del profesor:',
+                    style: TextStyle(fontWeight: FontWeight.w500, fontSize: 14),
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'Entregado el ${widget.evidencia.fechaEntregaAlumno!.day}/${widget.evidencia.fechaEntregaAlumno!.month}/${widget.evidencia.fechaEntregaAlumno!.year}',
-                    style: TextStyle(color: Colors.grey[600]),
+                    widget.evidencia.comentarioProfesor!,
+                    style: const TextStyle(fontSize: 15, height: 1.4),
                   ),
-                  if (widget.evidencia.comentarioAlumno != null &&
-                      widget.evidencia.comentarioAlumno!.isNotEmpty) ...[
-                    const SizedBox(height: 16),
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: Colors.grey[100],
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Text(widget.evidencia.comentarioAlumno!),
-                    ),
-                  ],
                 ],
-              ),
+              ],
             ),
-        ],
-      ),
+          ),
+        ),
+      ],
     );
   }
 
-  Widget _buildInfoChip({required IconData icon, required String label}) {
-    return Chip(avatar: Icon(icon, size: 16), label: Text(label));
-  }
-
-  Color _getColorEstado(EstadoEvidencia estado) {
+  Widget _estadoChip(EstadoEvidencia estado) {
+    Color bg;
+    String label;
     switch (estado) {
       case EstadoEvidencia.asignado:
-        return Colors.orange;
+        bg = Colors.orange[100]!;
+        label = 'Sin entregar';
+        break;
       case EstadoEvidencia.entregado:
-        return Colors.blue;
+        bg = Colors.blue[100]!;
+        label = 'Entregado';
+        break;
       case EstadoEvidencia.calificado:
-        return Colors.green;
+        bg = Colors.green[100]!;
+        label = 'Calificado';
+        break;
       case EstadoEvidencia.devuelto:
-        return Colors.red;
+        bg = Colors.red[100]!;
+        label = 'Devuelto';
+        break;
     }
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Text(label, style: const TextStyle(fontSize: 12)),
+    );
   }
 
-  IconData _getIconoEstado(EstadoEvidencia estado) {
-    switch (estado) {
-      case EstadoEvidencia.asignado:
-        return Icons.assignment;
-      case EstadoEvidencia.entregado:
-        return Icons.check_circle;
-      case EstadoEvidencia.calificado:
-        return Icons.grade;
-      case EstadoEvidencia.devuelto:
-        return Icons.assignment_return;
-    }
-  }
-
-  String _getLabelEstado(EstadoEvidencia estado) {
-    switch (estado) {
-      case EstadoEvidencia.asignado:
-        return 'Asignado - Sin entregar';
-      case EstadoEvidencia.entregado:
-        return 'Entregado - Pendiente de calificación';
-      case EstadoEvidencia.calificado:
-        return 'Calificado';
-      case EstadoEvidencia.devuelto:
-        return 'Devuelto para corrección';
-    }
+  String _formatearFecha(DateTime fecha) {
+    final meses = [
+      'ene',
+      'feb',
+      'mar',
+      'abr',
+      'may',
+      'jun',
+      'jul',
+      'ago',
+      'sep',
+      'oct',
+      'nov',
+      'dic',
+    ];
+    return '${fecha.day} ${meses[fecha.month - 1]} ${fecha.year}, ${fecha.hour}:${fecha.minute.toString().padLeft(2, '0')}';
   }
 
   void _agregarArchivo() {
@@ -388,6 +446,7 @@ class _DetalleEvidenciaAlumnoScreenState
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
         content: Text('Función de adjuntar archivos próximamente'),
+        duration: Duration(seconds: 2),
       ),
     );
   }
@@ -420,6 +479,35 @@ class _DetalleEvidenciaAlumnoScreenState
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(provider.lastError ?? 'Error al entregar'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _anularEntrega() async {
+    setState(() => _guardando = true);
+    final provider = context.read<CuadernoProvider>();
+    final evidenciaActualizada = widget.evidencia.copyWith(
+      estado: EstadoEvidencia.asignado,
+      fechaEntregaAlumno: null,
+    );
+    final ok = await provider.actualizarEvidencia(evidenciaActualizada);
+    if (mounted) {
+      setState(() => _guardando = false);
+      if (ok) {
+        Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Entrega anulada, puedes volver a modificar'),
+            backgroundColor: Colors.orange,
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(provider.lastError ?? 'Error al anular entrega'),
             backgroundColor: Colors.red,
           ),
         );

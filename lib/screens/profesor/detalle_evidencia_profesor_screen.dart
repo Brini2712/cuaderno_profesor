@@ -104,6 +104,18 @@ class _DetalleEvidenciaProfesorScreenState
               // Tabs
               TabBar(
                 controller: _tabController,
+                labelColor: Colors.white,
+                unselectedLabelColor: Colors.white70,
+                indicatorColor: Colors.white,
+                indicatorWeight: 3,
+                labelStyle: const TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600,
+                ),
+                unselectedLabelStyle: const TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w400,
+                ),
                 tabs: const [
                   Tab(text: 'Instrucciones'),
                   Tab(text: 'Entregas'),
