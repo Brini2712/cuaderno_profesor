@@ -5,7 +5,10 @@ import '../models/materia.dart';
 import '../widgets/materia_card.dart';
 import '../widgets/crear_materia_dialog.dart';
 import 'profesor/tomar_asistencia_screen.dart';
+import 'profesor/detalle_materia_screen.dart';
+import 'profesor/materia_search_delegate.dart';
 import 'package:go_router/go_router.dart';
+import 'package:flutter/services.dart';
 
 class ProfesorHomeScreen extends StatefulWidget {
   const ProfesorHomeScreen({super.key});
@@ -41,6 +44,12 @@ class _ProfesorHomeScreenState extends State<ProfesorHomeScreen> {
         return Scaffold(
           appBar: AppBar(
             title: const Text('Cuaderno Profesor'),
+            leading: IconButton(
+              icon: const Icon(Icons.search),
+              onPressed: () async {
+                showSearch(context: context, delegate: MateriaSearchDelegate());
+              },
+            ),
             actions: [
               PopupMenuButton<String>(
                 onSelected: (value) {
@@ -154,6 +163,10 @@ class _ProfesorHomeScreenState extends State<ProfesorHomeScreen> {
                 return MateriaCard(
                   materia: materia,
                   onTap: () => _navegarAMateria(materia),
+                  onEditar: () => _editarMateria(context, provider, materia),
+                  onEliminar: () =>
+                      _confirmarEliminar(context, provider, materia),
+                  onCopiarCodigo: () => _copiarCodigo(context, materia),
                 );
               },
             ),
@@ -271,13 +284,95 @@ class _ProfesorHomeScreenState extends State<ProfesorHomeScreen> {
   }
 
   void _navegarAMateria(Materia materia) {
-    // TODO: Navegar a la pantalla de detalle de la materia
-    print('Navegar a materia: ${materia.nombre}');
+    // Navegar a la pantalla de detalle
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => DetalleMateriaScreen(materia: materia)),
+    );
   }
 
   void _abrirTomarAsistencia(Materia m) {
     Navigator.of(context).push(
       MaterialPageRoute(builder: (_) => TomarAsistenciaScreen(materia: m)),
+    );
+  }
+
+  void _copiarCodigo(BuildContext context, Materia materia) {
+    final code = materia.codigoAcceso ?? '';
+    if (code.isEmpty) return;
+    Clipboard.setData(ClipboardData(text: code));
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('Código copiado')));
+  }
+
+  void _confirmarEliminar(
+    BuildContext context,
+    CuadernoProvider provider,
+    Materia materia,
+  ) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Eliminar materia'),
+        content: Text(
+          '¿Eliminar "${materia.nombre}"? Puedes restaurarla luego (borrado lógico).',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            onPressed: () async {
+              Navigator.pop(ctx);
+              final ok = await provider.eliminarMateria(materia.id, soft: true);
+              if (!mounted) return;
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(
+                    ok
+                        ? 'Materia eliminada'
+                        : (provider.lastError ?? 'No se pudo eliminar'),
+                  ),
+                  backgroundColor: ok ? Colors.green : Colors.red,
+                ),
+              );
+            },
+            child: const Text('Eliminar'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _editarMateria(
+    BuildContext context,
+    CuadernoProvider provider,
+    Materia materia,
+  ) {
+    showDialog(
+      context: context,
+      builder: (ctx) => CrearMateriaDialog(
+        onCrear: (m) async {
+          final editado = materia.copyWith(
+            nombre: m.nombre,
+            descripcion: m.descripcion,
+            color: m.color,
+          );
+          final ok = await provider.actualizarMateria(editado);
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                ok
+                    ? 'Materia actualizada'
+                    : (provider.lastError ?? 'Error actualizando'),
+              ),
+              backgroundColor: ok ? Colors.green : Colors.red,
+            ),
+          );
+        },
+      ),
     );
   }
 

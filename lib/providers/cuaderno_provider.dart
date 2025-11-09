@@ -183,6 +183,68 @@ class CuadernoProvider extends ChangeNotifier {
     }
   }
 
+  // Acciones Materias
+  Future<bool> actualizarMateria(Materia m) async {
+    try {
+      await _firestore.collection('materias').doc(m.id).update(m.toMap());
+      final idx = _materias.indexWhere((x) => x.id == m.id);
+      if (idx != -1) {
+        _materias[idx] = m;
+        notifyListeners();
+      }
+      return true;
+    } catch (e) {
+      _lastError = 'No se pudo actualizar la materia';
+      return false;
+    }
+  }
+
+  Future<bool> eliminarMateria(String materiaId, {bool soft = true}) async {
+    try {
+      if (soft) {
+        await _firestore.collection('materias').doc(materiaId).update({
+          'activo': false,
+        });
+      } else {
+        await _firestore.collection('materias').doc(materiaId).delete();
+      }
+      _materias.removeWhere((m) => m.id == materiaId);
+      notifyListeners();
+      return true;
+    } catch (e) {
+      _lastError = 'No se pudo eliminar la materia';
+      return false;
+    }
+  }
+
+  String? regenerarCodigoMateria(String materiaId) {
+    try {
+      final nuevo = _generarCodigo(6);
+      _firestore.collection('materias').doc(materiaId).update({
+        'codigoAcceso': nuevo,
+      });
+      final idx = _materias.indexWhere((m) => m.id == materiaId);
+      if (idx != -1) {
+        _materias[idx] = _materias[idx].copyWith(codigoAcceso: nuevo);
+        notifyListeners();
+      }
+      return nuevo;
+    } catch (_) {
+      _lastError = 'No se pudo regenerar el código';
+      return null;
+    }
+  }
+
+  String _generarCodigo(int len) {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    final now = DateTime.now().millisecondsSinceEpoch;
+    final buf = StringBuffer();
+    for (int i = 0; i < len; i++) {
+      buf.write(chars[(now + i) % chars.length]);
+    }
+    return buf.toString();
+  }
+
   // Gestión de alumnos
   Future<void> cargarAlumnos() async {
     Set<String> alumnosIds = {};

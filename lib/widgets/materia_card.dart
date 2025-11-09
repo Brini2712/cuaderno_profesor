@@ -4,11 +4,17 @@ import '../models/materia.dart';
 class MateriaCard extends StatelessWidget {
   final Materia materia;
   final VoidCallback onTap;
+  final VoidCallback? onEditar;
+  final VoidCallback? onEliminar;
+  final VoidCallback? onCopiarCodigo;
 
   const MateriaCard({
     super.key,
     required this.materia,
     required this.onTap,
+    this.onEditar,
+    this.onEliminar,
+    this.onCopiarCodigo,
   });
 
   @override
@@ -26,7 +32,9 @@ class MateriaCard extends StatelessWidget {
                 width: 4,
                 height: 60,
                 decoration: BoxDecoration(
-                  color: Color(int.parse(materia.color.replaceAll('#', '0xFF'))),
+                  color: Color(
+                    int.parse(materia.color.replaceAll('#', '0xFF')),
+                  ),
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
@@ -45,21 +53,14 @@ class MateriaCard extends StatelessWidget {
                     const SizedBox(height: 4),
                     Text(
                       materia.descripcion,
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Colors.grey[600],
-                      ),
+                      style: TextStyle(fontSize: 14, color: Colors.grey[600]),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                     ),
                     const SizedBox(height: 8),
                     Row(
                       children: [
-                        Icon(
-                          Icons.people,
-                          size: 16,
-                          color: Colors.grey[500],
-                        ),
+                        Icon(Icons.people, size: 16, color: Colors.grey[500]),
                         const SizedBox(width: 4),
                         Text(
                           '${materia.alumnosIds.length} estudiantes',
@@ -88,10 +89,25 @@ class MateriaCard extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 8),
-              Icon(
-                Icons.arrow_forward_ios,
-                size: 16,
-                color: Colors.grey[400],
+              PopupMenuButton<String>(
+                onSelected: (v) {
+                  if (v == 'editar' && onEditar != null) onEditar!();
+                  if (v == 'eliminar' && onEliminar != null) onEliminar!();
+                  if (v == 'copiar' && onCopiarCodigo != null)
+                    onCopiarCodigo!();
+                },
+                itemBuilder: (context) => [
+                  const PopupMenuItem(value: 'editar', child: Text('Editar')),
+                  const PopupMenuItem(
+                    value: 'eliminar',
+                    child: Text('Eliminar'),
+                  ),
+                  const PopupMenuItem(
+                    value: 'copiar',
+                    child: Text('Copiar código'),
+                  ),
+                ],
+                icon: Icon(Icons.more_vert, color: Colors.grey[600]),
               ),
             ],
           ),
