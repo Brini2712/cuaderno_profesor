@@ -97,14 +97,33 @@ class _DetalleEvidenciaAlumnoScreenState
     return ListView(
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
       children: [
-        // Título grande
-        Text(
-          widget.evidencia.titulo,
-          style: const TextStyle(
-            fontSize: 28,
-            fontWeight: FontWeight.w400,
-            letterSpacing: 0,
-          ),
+        // Encabezado con avatar + título (hero)
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Hero(
+              tag: 'ev-${widget.evidencia.id}',
+              child: CircleAvatar(
+                radius: 22,
+                backgroundColor: _colorPorTipo(widget.evidencia.tipo),
+                child: Icon(
+                  _iconoPorTipo(widget.evidencia.tipo),
+                  color: Colors.white,
+                ),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                widget.evidencia.titulo,
+                style: const TextStyle(
+                  fontSize: 28,
+                  fontWeight: FontWeight.w400,
+                  letterSpacing: 0,
+                ),
+              ),
+            ),
+          ],
         ),
         const SizedBox(height: 12),
         // Línea puntos + fecha (fecha alineada a la derecha estilo Classroom)
@@ -159,6 +178,29 @@ class _DetalleEvidenciaAlumnoScreenState
         ),
       ],
     );
+  }
+
+  // Helpers para icono/color (coherentes con la lista)
+  Color _colorPorTipo(TipoEvidencia t) {
+    switch (t) {
+      case TipoEvidencia.portafolio:
+        return Colors.blue;
+      case TipoEvidencia.actividad:
+        return Colors.green;
+      case TipoEvidencia.examen:
+        return Colors.orange;
+    }
+  }
+
+  IconData _iconoPorTipo(TipoEvidencia t) {
+    switch (t) {
+      case TipoEvidencia.portafolio:
+        return Icons.folder;
+      case TipoEvidencia.actividad:
+        return Icons.assignment;
+      case TipoEvidencia.examen:
+        return Icons.quiz;
+    }
   }
 
   Widget _buildPanelTrabajo(bool estaEntregado, bool fueDevuelto) {

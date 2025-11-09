@@ -7,7 +7,9 @@ import 'providers/cuaderno_provider.dart';
 import 'screens/login_screen.dart';
 import 'screens/profesor_home_screen.dart';
 import 'screens/alumno_home_screen.dart';
-import 'screens/web/reportes_web_screen.dart';
+// Import condicional para evitar 'dart:html' en plataformas móviles/desktop
+import 'screens/web/reportes_web_screen_stub.dart'
+    if (dart.library.html) 'screens/web/reportes_web_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();

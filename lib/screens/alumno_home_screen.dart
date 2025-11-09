@@ -6,6 +6,8 @@ import '../models/materia.dart';
 import '../models/evidencia.dart';
 import 'alumno/alumno_evidencias_screen.dart';
 import 'alumno/calendario_alumno_widget.dart';
+import 'perfil_screen.dart';
+import 'configuracion_screen.dart';
 
 class AlumnoHomeScreen extends StatefulWidget {
   const AlumnoHomeScreen({super.key});
@@ -76,6 +78,20 @@ class _AlumnoHomeScreenState extends State<AlumnoHomeScreen> {
                             _cerrarSesion(provider);
                           } else if (value == 'join') {
                             _mostrarUnirseAClase(provider);
+                          } else if (value == 'profile') {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (ctx) => const PerfilScreen(),
+                              ),
+                            );
+                          } else if (value == 'settings') {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (ctx) => const ConfiguracionScreen(),
+                              ),
+                            );
                           }
                         },
                         itemBuilder: (context) => [
@@ -90,6 +106,17 @@ class _AlumnoHomeScreenState extends State<AlumnoHomeScreen> {
                             ),
                           ),
                           PopupMenuItem(
+                            value: 'settings',
+                            child: Row(
+                              children: const [
+                                Icon(Icons.settings),
+                                SizedBox(width: 8),
+                                Text('Configuración'),
+                              ],
+                            ),
+                          ),
+                          const PopupMenuDivider(),
+                          PopupMenuItem(
                             value: 'join',
                             child: Row(
                               children: const [
@@ -99,6 +126,7 @@ class _AlumnoHomeScreenState extends State<AlumnoHomeScreen> {
                               ],
                             ),
                           ),
+                          const PopupMenuDivider(),
                           PopupMenuItem(
                             value: 'logout',
                             child: Row(

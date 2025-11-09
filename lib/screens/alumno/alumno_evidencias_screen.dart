@@ -88,12 +88,19 @@ class _AlumnoEvidenciasScreenState extends State<AlumnoEvidenciasScreen> {
                         ),
                       ),
                       const SizedBox(height: 8),
-                      LinearProgressIndicator(
-                        value: porcentaje / 100,
-                        backgroundColor: Colors.grey[300],
-                        valueColor: AlwaysStoppedAnimation<Color>(
-                          porcentaje >= 50 ? Colors.green : Colors.orange,
-                        ),
+                      TweenAnimationBuilder<double>(
+                        duration: const Duration(milliseconds: 600),
+                        curve: Curves.easeOutCubic,
+                        tween: Tween<double>(begin: 0, end: porcentaje / 100),
+                        builder: (context, value, _) {
+                          return LinearProgressIndicator(
+                            value: value,
+                            backgroundColor: Colors.grey[300],
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              porcentaje >= 50 ? Colors.green : Colors.orange,
+                            ),
+                          );
+                        },
                       ),
                       const SizedBox(height: 4),
                       Text(
@@ -132,82 +139,102 @@ class _AlumnoEvidenciasScreenState extends State<AlumnoEvidenciasScreen> {
                     itemCount: evidenciasFiltradas.length,
                     itemBuilder: (ctx, i) {
                       final ev = evidenciasFiltradas[i];
-                      return Card(
-                        margin: const EdgeInsets.only(bottom: 12),
-                        child: ListTile(
-                          leading: CircleAvatar(
-                            backgroundColor: _colorPorTipo(ev.tipo),
-                            child: Icon(
-                              _iconoPorTipo(ev.tipo),
-                              color: Colors.white,
+                      return TweenAnimationBuilder<double>(
+                        duration: Duration(milliseconds: 300 + i * 40),
+                        tween: Tween(begin: 20, end: 0),
+                        curve: Curves.easeOut,
+                        builder: (context, dy, child) {
+                          return Opacity(
+                            opacity: (1 - (dy / 20)).clamp(0, 1),
+                            child: Transform.translate(
+                              offset: Offset(0, dy),
+                              child: child,
                             ),
-                          ),
-                          title: Text(ev.titulo),
-                          subtitle: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(ev.descripcion),
-                              const SizedBox(height: 4),
-                              Text(
-                                '${_labelTipo(ev.tipo)} • ${_labelEstado(ev.estado)}',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: Colors.grey[600],
+                          );
+                        },
+                        child: Card(
+                          margin: const EdgeInsets.only(bottom: 12),
+                          child: ListTile(
+                            leading: Hero(
+                              tag: 'ev-${ev.id}',
+                              child: CircleAvatar(
+                                backgroundColor: _colorPorTipo(ev.tipo),
+                                child: Icon(
+                                  _iconoPorTipo(ev.tipo),
+                                  color: Colors.white,
                                 ),
                               ),
-                              if (ev.calificacionNumerica != null)
+                            ),
+                            title: Text(ev.titulo),
+                            subtitle: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(ev.descripcion),
+                                const SizedBox(height: 4),
                                 Text(
-                                  'Calificación: ${ev.calificacionNumerica!.toStringAsFixed(1)}',
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 12,
-                                    color: Colors.green,
-                                  ),
-                                ),
-                              if (ev.observaciones != null &&
-                                  ev.observaciones!.isNotEmpty)
-                                Text(
-                                  'Obs.: ${ev.observaciones}',
+                                  '${_labelTipo(ev.tipo)} • ${_labelEstado(ev.estado)}',
                                   style: TextStyle(
-                                    fontSize: 11,
-                                    color: Colors.grey[700],
+                                    fontSize: 12,
+                                    color: Colors.grey[600],
                                   ),
                                 ),
-                            ],
-                          ),
-                          trailing: ev.estado == EstadoEvidencia.asignado
-                              ? ElevatedButton.icon(
-                                  icon: const Icon(Icons.check, size: 16),
-                                  label: const Text('Entregar'),
-                                  onPressed: () {
-                                    Navigator.of(context).push(
-                                      MaterialPageRoute(
-                                        builder: (_) =>
-                                            DetalleEvidenciaAlumnoScreen(
-                                              evidencia: ev,
-                                            ),
-                                      ),
-                                    );
-                                  },
-                                )
-                              : Icon(
-                                  ev.estado == EstadoEvidencia.entregado
-                                      ? Icons.check_circle
-                                      : ev.estado == EstadoEvidencia.calificado
-                                      ? Icons.verified
-                                      : Icons.assignment_return,
-                                  color: ev.estado == EstadoEvidencia.entregado
-                                      ? Colors.blue
-                                      : Colors.green,
+                                if (ev.calificacionNumerica != null)
+                                  Text(
+                                    'Calificación: ${ev.calificacionNumerica!.toStringAsFixed(1)}',
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 12,
+                                      color: Colors.green,
+                                    ),
+                                  ),
+                                if (ev.observaciones != null &&
+                                    ev.observaciones!.isNotEmpty)
+                                  Text(
+                                    'Obs.: ${ev.observaciones}',
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      color: Colors.grey[700],
+                                    ),
+                                  ),
+                              ],
+                            ),
+                            trailing: ev.estado == EstadoEvidencia.asignado
+                                ? ElevatedButton.icon(
+                                    icon: const Icon(Icons.check, size: 16),
+                                    label: const Text('Entregar'),
+                                    onPressed: () {
+                                      Navigator.of(context).push(
+                                        MaterialPageRoute(
+                                          builder: (_) =>
+                                              DetalleEvidenciaAlumnoScreen(
+                                                evidencia: ev,
+                                              ),
+                                        ),
+                                      );
+                                    },
+                                  )
+                                : Icon(
+                                    ev.estado == EstadoEvidencia.entregado
+                                        ? Icons.check_circle
+                                        : ev.estado ==
+                                              EstadoEvidencia.calificado
+                                        ? Icons.verified
+                                        : Icons.assignment_return,
+                                    color:
+                                        ev.estado == EstadoEvidencia.entregado
+                                        ? Colors.blue
+                                        : Colors.green,
+                                  ),
+                            onTap: () {
+                              Navigator.of(context).push(
+                                MaterialPageRoute(
+                                  builder: (_) => DetalleEvidenciaAlumnoScreen(
+                                    evidencia: ev,
+                                  ),
                                 ),
-                          onTap: () {
-                            Navigator.of(context).push(
-                              MaterialPageRoute(
-                                builder: (_) =>
-                                    DetalleEvidenciaAlumnoScreen(evidencia: ev),
-                              ),
-                            );
-                          },
+                              );
+                            },
+                          ),
                         ),
                       );
                     },
