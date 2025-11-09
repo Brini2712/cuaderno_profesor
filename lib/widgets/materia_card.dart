@@ -93,8 +93,9 @@ class MateriaCard extends StatelessWidget {
                 onSelected: (v) {
                   if (v == 'editar' && onEditar != null) onEditar!();
                   if (v == 'eliminar' && onEliminar != null) onEliminar!();
-                  if (v == 'copiar' && onCopiarCodigo != null)
+                  if (v == 'copiar' && onCopiarCodigo != null) {
                     onCopiarCodigo!();
+                  }
                 },
                 itemBuilder: (context) => [
                   const PopupMenuItem(value: 'editar', child: Text('Editar')),

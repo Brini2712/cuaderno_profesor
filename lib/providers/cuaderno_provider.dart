@@ -6,6 +6,7 @@ import '../models/materia.dart';
 import '../models/asistencia.dart';
 import '../models/evidencia.dart';
 import '../models/calificacion.dart';
+import '../models/reporte_estadisticas.dart';
 import '../services/auth_service.dart';
 import 'package:uuid/uuid.dart';
 import '../utils/analytics.dart';
@@ -607,6 +608,130 @@ class CuadernoProvider extends ChangeNotifier {
     return AnalyticsUtils.puedeExentar(
       porcentajeAsistencia: porcentajeAsistencia,
       porcentajeEvidencias: porcentajeEvidencias,
+    );
+  }
+
+  // ============= REPORTES WEB =============
+  /// Genera un reporte de estadísticas para una materia en un rango de fechas
+  ReporteEstadisticas generarReporte({
+    required String materiaId,
+    required DateTime fechaInicio,
+    required DateTime fechaFin,
+  }) {
+    final materia = _materias.firstWhere(
+      (m) => m.id == materiaId,
+      orElse: () => Materia(
+        id: '',
+        nombre: 'Desconocida',
+        descripcion: '',
+        color: '#2196F3',
+        profesorId: '',
+        fechaCreacion: DateTime.now(),
+      ),
+    );
+
+    final List<EstadisticaAlumno> estadisticas = [];
+
+    for (final alumnoId in materia.alumnosIds) {
+      final alumno = _alumnos.firstWhere(
+        (a) => a.id == alumnoId,
+        orElse: () => Usuario(
+          id: alumnoId,
+          nombre: 'Desconocido',
+          email: '',
+          tipo: TipoUsuario.alumno,
+          fechaCreacion: DateTime.now(),
+        ),
+      );
+
+      // Filtrar asistencias en el rango
+      final asistenciasRango = _asistencias
+          .where(
+            (a) =>
+                a.alumnoId == alumnoId &&
+                a.materiaId == materiaId &&
+                a.fecha.isAfter(
+                  fechaInicio.subtract(const Duration(days: 1)),
+                ) &&
+                a.fecha.isBefore(fechaFin.add(const Duration(days: 1))),
+          )
+          .toList();
+
+      // Filtrar evidencias en el rango
+      final evidenciasRango = _evidencias
+          .where(
+            (e) =>
+                e.alumnoId == alumnoId &&
+                e.materiaId == materiaId &&
+                e.fechaEntrega.isAfter(
+                  fechaInicio.subtract(const Duration(days: 1)),
+                ) &&
+                e.fechaEntrega.isBefore(fechaFin.add(const Duration(days: 1))),
+          )
+          .toList();
+
+      final porcentajeAsist = asistenciasRango.isEmpty
+          ? 0.0
+          : AnalyticsUtils.porcentajeAsistencia(asistenciasRango);
+
+      final entregadas = evidenciasRango
+          .where((e) => e.estado != EstadoEvidencia.asignado)
+          .length;
+      final total = evidenciasRango.length;
+      final porcentajeEvid = AnalyticsUtils.porcentajeEvidencias(
+        entregadas: entregadas,
+        esperadas: total,
+      );
+
+      // Evaluaciones reprobadas (simulamos con calificaciones numéricas < 6)
+      final califs = _calificaciones
+          .where((c) => c.alumnoId == alumnoId && c.materiaId == materiaId)
+          .toList();
+      int evaluacionesReprobadas = 0;
+      if (califs.isNotEmpty) {
+        final calif = califs.first;
+        if (calif.examen != null && calif.examen! < 6) evaluacionesReprobadas++;
+        if (calif.portafolioEvidencias != null &&
+            calif.portafolioEvidencias! < 6) {
+          evaluacionesReprobadas++;
+        }
+        if (calif.actividadComplementaria != null &&
+            calif.actividadComplementaria! < 6)
+          evaluacionesReprobadas++;
+      }
+
+      final tieneRiesgo = AnalyticsUtils.riesgoReprobacion(
+        porcentajeAsistencia: porcentajeAsist,
+        porcentajeEvidencias: porcentajeEvid,
+      );
+
+      final puedeExent = AnalyticsUtils.puedeExentar(
+        porcentajeAsistencia: porcentajeAsist,
+        porcentajeEvidencias: porcentajeEvid,
+      );
+
+      final requiereOrd = evaluacionesReprobadas >= 2;
+
+      estadisticas.add(
+        EstadisticaAlumno(
+          alumnoId: alumnoId,
+          alumnoNombre: alumno.nombre,
+          porcentajeAsistencia: porcentajeAsist,
+          porcentajeEvidencias: porcentajeEvid,
+          evaluacionesReprobadas: evaluacionesReprobadas,
+          tieneRiesgo: tieneRiesgo,
+          puedeExentar: puedeExent,
+          requiereOrdinaria: requiereOrd,
+        ),
+      );
+    }
+
+    return ReporteEstadisticas(
+      materiaId: materiaId,
+      materiaNombre: materia.nombre,
+      fechaInicio: fechaInicio,
+      fechaFin: fechaFin,
+      estadisticasAlumnos: estadisticas,
     );
   }
 

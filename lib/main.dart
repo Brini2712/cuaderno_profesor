@@ -7,6 +7,7 @@ import 'providers/cuaderno_provider.dart';
 import 'screens/login_screen.dart';
 import 'screens/profesor_home_screen.dart';
 import 'screens/alumno_home_screen.dart';
+import 'screens/web/reportes_web_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -71,6 +72,10 @@ final GoRouter _router = GoRouter(
     GoRoute(
       path: '/alumno',
       builder: (context, state) => const AlumnoHomeScreen(),
+    ),
+    GoRoute(
+      path: '/reportes',
+      builder: (context, state) => const ReportesWebScreen(),
     ),
   ],
 );

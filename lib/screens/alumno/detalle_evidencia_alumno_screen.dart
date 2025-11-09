@@ -1,5 +1,9 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:file_picker/file_picker.dart';
+import 'package:firebase_storage/firebase_storage.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../models/evidencia.dart';
 import '../../providers/cuaderno_provider.dart';
 
@@ -19,6 +23,10 @@ class _DetalleEvidenciaAlumnoScreenState
   late TextEditingController _enlaceCtrl;
   bool _guardando = false;
   final List<String> _archivosAdjuntos = [];
+  bool _subiendo = false;
+  String _restante = '';
+  Timer? _countdownTimer;
+  Timer? _autoSaveTimer;
 
   @override
   void initState() {
@@ -30,12 +38,15 @@ class _DetalleEvidenciaAlumnoScreenState
       text: widget.evidencia.enlaceExterno ?? '',
     );
     _archivosAdjuntos.addAll(widget.evidencia.archivosAdjuntos);
+    _iniciarCountdown();
   }
 
   @override
   void dispose() {
     _comentarioCtrl.dispose();
     _enlaceCtrl.dispose();
+    _countdownTimer?.cancel();
+    _autoSaveTimer?.cancel();
     super.dispose();
   }
 
@@ -177,12 +188,34 @@ class _DetalleEvidenciaAlumnoScreenState
                         fontWeight: FontWeight.w500,
                       ),
                     ),
-                    _estadoChip(estado),
+                    AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 200),
+                      child: _estadoChip(estado),
+                    ),
                   ],
                 ),
+                if (_restante.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  Text(
+                    _restante,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: widget.evidencia.estaAtrasado
+                          ? Colors.red[700]
+                          : Colors.grey[700],
+                    ),
+                  ),
+                ],
                 const SizedBox(height: 16),
                 if (estado == EstadoEvidencia.calificado &&
                     widget.evidencia.calificacionNumerica != null) ...[
+                  if (widget.evidencia.fechaCalificacion != null) ...[
+                    Text(
+                      'Calificado el ${_formatearFecha(widget.evidencia.fechaCalificacion!)}',
+                      style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                    ),
+                    const SizedBox(height: 8),
+                  ],
                   Text(
                     '${widget.evidencia.calificacionNumerica!.toStringAsFixed(1)} / ${widget.evidencia.puntosTotales.toStringAsFixed(0)}',
                     style: TextStyle(
@@ -191,6 +224,40 @@ class _DetalleEvidenciaAlumnoScreenState
                       color: Colors.green[700],
                     ),
                   ),
+                  if (widget.evidencia.comentarioProfesor != null &&
+                      widget.evidencia.comentarioProfesor!.isNotEmpty) ...[
+                    const SizedBox(height: 12),
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.blue[50],
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.blue[100]!),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Comentario del profesor:',
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w500,
+                              color: Colors.blue[900],
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            widget.evidencia.comentarioProfesor!,
+                            style: TextStyle(
+                              fontSize: 14,
+                              height: 1.4,
+                              color: Colors.blue[900],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                   const SizedBox(height: 20),
                 ],
                 if (fueDevuelto)
@@ -239,16 +306,135 @@ class _DetalleEvidenciaAlumnoScreenState
                   ),
                 if (fueDevuelto) const SizedBox(height: 16),
                 if (!estaEntregado || fueDevuelto)
-                  OutlinedButton.icon(
-                    onPressed: _agregarArchivo,
-                    icon: const Icon(Icons.add),
-                    label: const Text('Añadir o crear'),
-                    style: OutlinedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 20,
-                        vertical: 16,
+                  PopupMenuButton<String>(
+                    enabled: !_subiendo,
+                    onSelected: (value) {
+                      switch (value) {
+                        case 'archivo':
+                          _agregarArchivo();
+                          break;
+                        case 'enlace':
+                          _mostrarDialogoEnlace();
+                          break;
+                        case 'google_drive':
+                          _mostrarMensajeProximamente('Google Drive');
+                          break;
+                        case 'docs':
+                          _mostrarMensajeProximamente('Documentos');
+                          break;
+                        case 'sheets':
+                          _mostrarMensajeProximamente('Hojas de cálculo');
+                          break;
+                        case 'slides':
+                          _mostrarMensajeProximamente('Presentaciones');
+                          break;
+                        case 'drawings':
+                          _mostrarMensajeProximamente('Dibujos');
+                          break;
+                      }
+                    },
+                    itemBuilder: (context) => [
+                      PopupMenuItem(
+                        value: 'google_drive',
+                        child: Row(
+                          children: [
+                            Icon(Icons.cloud, color: Colors.blue[700]),
+                            const SizedBox(width: 12),
+                            const Text('Google Drive'),
+                          ],
+                        ),
                       ),
-                      side: BorderSide(color: Colors.grey[400]!),
+                      PopupMenuItem(
+                        value: 'enlace',
+                        child: Row(
+                          children: [
+                            Icon(Icons.link, color: Colors.blue[700]),
+                            const SizedBox(width: 12),
+                            const Text('Enlace'),
+                          ],
+                        ),
+                      ),
+                      PopupMenuItem(
+                        value: 'archivo',
+                        child: Row(
+                          children: [
+                            Icon(Icons.attach_file, color: Colors.blue[700]),
+                            const SizedBox(width: 12),
+                            const Text('Archivo'),
+                          ],
+                        ),
+                      ),
+                      const PopupMenuDivider(),
+                      const PopupMenuItem(
+                        enabled: false,
+                        height: 32,
+                        child: Text(
+                          'Crear',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                            color: Colors.grey,
+                          ),
+                        ),
+                      ),
+                      PopupMenuItem(
+                        value: 'docs',
+                        child: Row(
+                          children: [
+                            Icon(Icons.description, color: Colors.blue[600]),
+                            const SizedBox(width: 12),
+                            const Text('Documentos'),
+                          ],
+                        ),
+                      ),
+                      PopupMenuItem(
+                        value: 'sheets',
+                        child: Row(
+                          children: [
+                            Icon(Icons.table_chart, color: Colors.green[600]),
+                            const SizedBox(width: 12),
+                            const Text('Hojas de cálculo'),
+                          ],
+                        ),
+                      ),
+                      PopupMenuItem(
+                        value: 'slides',
+                        child: Row(
+                          children: [
+                            Icon(Icons.slideshow, color: Colors.orange[600]),
+                            const SizedBox(width: 12),
+                            const Text('Presentaciones'),
+                          ],
+                        ),
+                      ),
+                      PopupMenuItem(
+                        value: 'drawings',
+                        child: Row(
+                          children: [
+                            Icon(Icons.palette, color: Colors.red[600]),
+                            const SizedBox(width: 12),
+                            const Text('Dibujos'),
+                          ],
+                        ),
+                      ),
+                    ],
+                    child: OutlinedButton.icon(
+                      onPressed: _subiendo ? null : null,
+                      icon: _subiendo
+                          ? const SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Icon(Icons.add),
+                      label: Text(_subiendo ? 'Subiendo...' : 'Añadir o crear'),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 20,
+                          vertical: 16,
+                        ),
+                        side: BorderSide(color: Colors.grey[400]!),
+                      ),
                     ),
                   ),
                 if (_archivosAdjuntos.isNotEmpty) ...[
@@ -267,6 +453,7 @@ class _DetalleEvidenciaAlumnoScreenState
                           color: Colors.blue[700],
                         ),
                         title: Text(archivo.split('/').last),
+                        onTap: () => _abrirUrl(archivo),
                         trailing: (!estaEntregado || fueDevuelto)
                             ? IconButton(
                                 icon: const Icon(Icons.close),
@@ -281,14 +468,29 @@ class _DetalleEvidenciaAlumnoScreenState
                     ),
                   ),
                 ],
-                if (_enlaceCtrl.text.isNotEmpty ||
-                    (!estaEntregado || fueDevuelto)) ...[
+                // Campo de enlace: SOLO mostrar si ya hay un enlace agregado (vía menú)
+                // Antes aparecía siempre mientras no estuviera entregado, se elimina para que
+                // la opción viva únicamente dentro del popup y aquí solo sea edición/preview.
+                if (_enlaceCtrl.text.isNotEmpty) ...[
                   const SizedBox(height: 16),
                   TextFormField(
                     controller: _enlaceCtrl,
                     decoration: InputDecoration(
-                      hintText: 'Añadir enlace',
+                      hintText: 'Enlace',
                       prefixIcon: const Icon(Icons.link),
+                      suffixIcon: IconButton(
+                        icon: const Icon(Icons.close),
+                        tooltip: 'Quitar enlace',
+                        onPressed:
+                            (!_subiendo && (!estaEntregado || fueDevuelto))
+                            ? () {
+                                setState(() {
+                                  _enlaceCtrl.clear();
+                                });
+                                _autoSave();
+                              }
+                            : null,
+                      ),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(8),
                       ),
@@ -296,7 +498,12 @@ class _DetalleEvidenciaAlumnoScreenState
                       fillColor: Colors.white,
                     ),
                     enabled: !estaEntregado || fueDevuelto,
+                    onChanged: (_) => _autoSave(),
                   ),
+                  if (_enlaceCtrl.text.isNotEmpty) ...[
+                    const SizedBox(height: 6),
+                    _buildEnlacePreview(_enlaceCtrl.text),
+                  ],
                 ],
                 const SizedBox(height: 20),
                 if (!estaEntregado || fueDevuelto)
@@ -334,6 +541,27 @@ class _DetalleEvidenciaAlumnoScreenState
                     'Entregado el ${_formatearFecha(widget.evidencia.fechaEntregaAlumno!)}',
                     style: TextStyle(color: Colors.grey[600], fontSize: 13),
                   ),
+                  if (!widget.evidencia.fueEntregadoATiempo) ...[
+                    const SizedBox(height: 6),
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.warning_amber,
+                          size: 14,
+                          color: Colors.orange[700],
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          'Entregado con retraso',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.orange[700],
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
                 ],
               ],
             ),
@@ -369,21 +597,8 @@ class _DetalleEvidenciaAlumnoScreenState
                   ),
                   maxLines: 3,
                   enabled: !estaEntregado || fueDevuelto,
+                  onChanged: (_) => _autoSave(),
                 ),
-                if (estado == EstadoEvidencia.calificado &&
-                    widget.evidencia.comentarioProfesor != null &&
-                    widget.evidencia.comentarioProfesor!.isNotEmpty) ...[
-                  const SizedBox(height: 20),
-                  const Text(
-                    'Comentario del profesor:',
-                    style: TextStyle(fontWeight: FontWeight.w500, fontSize: 14),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    widget.evidencia.comentarioProfesor!,
-                    style: const TextStyle(fontSize: 15, height: 1.4),
-                  ),
-                ],
               ],
             ),
           ),
@@ -439,16 +654,6 @@ class _DetalleEvidenciaAlumnoScreenState
       'dic',
     ];
     return '${fecha.day} ${meses[fecha.month - 1]} ${fecha.year}, ${fecha.hour}:${fecha.minute.toString().padLeft(2, '0')}';
-  }
-
-  void _agregarArchivo() {
-    // TODO: Implementar selección de archivos
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Función de adjuntar archivos próximamente'),
-        duration: Duration(seconds: 2),
-      ),
-    );
   }
 
   Future<void> _entregar() async {
@@ -513,5 +718,178 @@ class _DetalleEvidenciaAlumnoScreenState
         );
       }
     }
+  }
+
+  // ======= Extras aplicados =======
+  void _iniciarCountdown() {
+    void actualizar() {
+      final now = DateTime.now();
+      final due = widget.evidencia.fechaEntrega;
+      final diff = due.difference(now);
+      if (diff.isNegative) {
+        setState(() {
+          _restante = 'Entrega vencida el ${_formatearFecha(due)}';
+        });
+      } else {
+        final d = diff.inDays;
+        final h = diff.inHours % 24;
+        final m = diff.inMinutes % 60;
+        setState(() {
+          _restante = d > 0 ? 'Faltan ${d}d ${h}h ${m}m' : 'Faltan ${h}h ${m}m';
+        });
+      }
+    }
+
+    actualizar();
+    _countdownTimer?.cancel();
+    _countdownTimer = Timer.periodic(
+      const Duration(minutes: 1),
+      (_) => actualizar(),
+    );
+  }
+
+  Future<void> _agregarArchivo() async {
+    try {
+      final result = await FilePicker.platform.pickFiles(withData: true);
+      if (result == null || result.files.isEmpty) return;
+      final file = result.files.single;
+      if (file.bytes == null) return;
+      setState(() => _subiendo = true);
+
+      final ref = FirebaseStorage.instance
+          .ref()
+          .child('evidencias')
+          .child(widget.evidencia.materiaId)
+          .child(widget.evidencia.alumnoId)
+          .child(widget.evidencia.id)
+          .child(file.name);
+
+      final task = await ref.putData(file.bytes!, SettableMetadata());
+      final url = await task.ref.getDownloadURL();
+      setState(() {
+        _archivosAdjuntos.add(url);
+      });
+
+      // Persistir en Firestore
+      final provider = context.read<CuadernoProvider>();
+      final updated = widget.evidencia.copyWith(
+        archivosAdjuntos: _archivosAdjuntos,
+      );
+      await provider.actualizarEvidencia(updated);
+
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Archivo subido')));
+      }
+    } catch (e) {
+      if (mounted) {
+        final msg = e.toString().contains("LateInitializationError")
+            ? 'No se pudo iniciar Firebase Storage. En tu proyecto Firebase el módulo Storage no está habilitado (o requiere actualizar el plan). Abre la consola > Storage y crea el bucket; luego vuelve a correr la app.'
+            : 'Error subiendo archivo: $e';
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(msg)));
+      }
+    } finally {
+      if (mounted) setState(() => _subiendo = false);
+    }
+  }
+
+  Future<void> _abrirUrl(String url) async {
+    try {
+      final uri = Uri.parse(url);
+      if (!await canLaunchUrl(uri)) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('No se pudo abrir el enlace')),
+        );
+        return;
+      }
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    } catch (_) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Enlace inválido')));
+    }
+  }
+
+  void _autoSave() {
+    // Solo si aún puede editar
+    final editable = widget.evidencia.estado != EstadoEvidencia.calificado;
+    if (!editable) return;
+    _autoSaveTimer?.cancel();
+    _autoSaveTimer = Timer(const Duration(milliseconds: 800), () async {
+      final provider = context.read<CuadernoProvider>();
+      final updated = widget.evidencia.copyWith(
+        comentarioAlumno: _comentarioCtrl.text.trim(),
+        enlaceExterno: _enlaceCtrl.text.trim(),
+        archivosAdjuntos: _archivosAdjuntos,
+      );
+      await provider.actualizarEvidencia(updated);
+    });
+  }
+
+  Widget _buildEnlacePreview(String url) {
+    if (url.trim().isEmpty) return const SizedBox.shrink();
+    final host = Uri.tryParse(url)?.host ?? '';
+    return ListTile(
+      dense: true,
+      contentPadding: EdgeInsets.zero,
+      leading: const Icon(Icons.link),
+      title: Text(url, maxLines: 1, overflow: TextOverflow.ellipsis),
+      subtitle: Text(
+        host,
+        style: TextStyle(color: Colors.grey[600], fontSize: 12),
+      ),
+      trailing: TextButton(
+        onPressed: () => _abrirUrl(url),
+        child: const Text('Abrir'),
+      ),
+      onTap: () => _abrirUrl(url),
+    );
+  }
+
+  void _mostrarDialogoEnlace() {
+    final controller = TextEditingController(text: _enlaceCtrl.text);
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Añadir enlace'),
+        content: TextField(
+          controller: controller,
+          decoration: const InputDecoration(
+            labelText: 'URL',
+            hintText: 'https://ejemplo.com',
+            border: OutlineInputBorder(),
+          ),
+          autofocus: true,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            onPressed: () {
+              setState(() {
+                _enlaceCtrl.text = controller.text.trim();
+              });
+              _autoSave();
+              Navigator.pop(ctx);
+            },
+            child: const Text('Añadir'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _mostrarMensajeProximamente(String funcion) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('$funcion próximamente'),
+        duration: const Duration(seconds: 2),
+      ),
+    );
   }
 }

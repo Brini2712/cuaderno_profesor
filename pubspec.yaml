@@ -57,12 +57,19 @@ dependencies:
   image_picker: ^1.1.2
   cached_network_image: ^3.4.1
   
+  # File picking & links
+  file_picker: ^8.0.0
+  url_launcher: ^6.3.0
+  
   # Charts for reports
   fl_chart: ^0.69.0
   
   # PDF generation
   pdf: ^3.11.1
   printing: ^5.13.2
+  
+  # CSV export
+  csv: ^6.0.0
   
   # Utils
   uuid: ^4.5.1

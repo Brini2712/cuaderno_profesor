@@ -539,7 +539,43 @@ class _ProfesorHomeScreenState extends State<ProfesorHomeScreen> {
   }
 
   Widget _buildReportesTab(CuadernoProvider provider) {
-    return const Center(child: Text('Módulo de Reportes - En construcción'));
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: Colors.blue[50],
+              shape: BoxShape.circle,
+            ),
+            child: Icon(Icons.analytics, size: 64, color: Colors.blue[700]),
+          ),
+          const SizedBox(height: 24),
+          const Text(
+            'Reportes y Estadísticas',
+            style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 8),
+          const Text(
+            'Accede a la versión web para visualizar reportes completos',
+            style: TextStyle(fontSize: 16, color: Colors.grey),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 24),
+          ElevatedButton.icon(
+            onPressed: () {
+              context.go('/reportes');
+            },
+            icon: const Icon(Icons.open_in_browser),
+            label: const Text('Abrir Reportes Web'),
+            style: ElevatedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   Widget _buildEmptyState({
