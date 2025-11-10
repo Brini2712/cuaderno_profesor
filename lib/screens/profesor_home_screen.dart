@@ -72,8 +72,139 @@ class _ProfesorHomeScreenState extends State<ProfesorHomeScreen> {
     });
   }
 
+  Widget _buildDrawer(CuadernoProvider provider, BuildContext context) {
+    return Drawer(
+      child: ListView(
+        padding: EdgeInsets.zero,
+        children: [
+          DrawerHeader(
+            decoration: const BoxDecoration(color: Color(0xFF1976D2)),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                const Icon(Icons.school, size: 48, color: Colors.white),
+                const SizedBox(height: 16),
+                Text(
+                  provider.usuario?.nombre ?? 'Profesor',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  provider.usuario?.email ?? '',
+                  style: const TextStyle(color: Colors.white70, fontSize: 14),
+                ),
+              ],
+            ),
+          ),
+          ListTile(
+            leading: const Icon(Icons.home),
+            title: const Text('Inicio'),
+            selected: _selectedIndex == 0,
+            onTap: () {
+              setState(() => _selectedIndex = 0);
+              context.go('/profesor/inicio');
+              Navigator.pop(context);
+            },
+          ),
+          ListTile(
+            leading: const Icon(Icons.class_),
+            title: const Text('Materias'),
+            selected: _selectedIndex == 1,
+            onTap: () {
+              setState(() => _selectedIndex = 1);
+              context.go('/profesor/materias');
+              Navigator.pop(context);
+            },
+          ),
+          ListTile(
+            leading: const Icon(Icons.how_to_reg),
+            title: const Text('Asistencia'),
+            selected: _selectedIndex == 2,
+            onTap: () {
+              setState(() => _selectedIndex = 2);
+              context.go('/profesor/asistencia');
+              Navigator.pop(context);
+            },
+          ),
+          ListTile(
+            leading: const Icon(Icons.assignment),
+            title: const Text('Evidencias'),
+            selected: _selectedIndex == 3,
+            onTap: () {
+              setState(() => _selectedIndex = 3);
+              context.go('/profesor/evidencias');
+              Navigator.pop(context);
+            },
+          ),
+          ListTile(
+            leading: const Icon(Icons.assessment),
+            title: const Text('Reportes'),
+            selected: _selectedIndex == 4,
+            onTap: () {
+              setState(() => _selectedIndex = 4);
+              context.go('/profesor/reportes');
+              Navigator.pop(context);
+            },
+          ),
+          const Divider(),
+          Consumer<NotificacionesProvider>(
+            builder: (context, notifProvider, _) {
+              final noLeidas = notifProvider.notificacionesNoLeidas;
+              return ListTile(
+                leading: Badge(
+                  label: Text(noLeidas.toString()),
+                  isLabelVisible: noLeidas > 0,
+                  child: const Icon(Icons.notifications),
+                ),
+                title: const Text('Notificaciones'),
+                onTap: () {
+                  Navigator.pop(context);
+                  context.push('/notificaciones');
+                },
+              );
+            },
+          ),
+          ListTile(
+            leading: const Icon(Icons.settings),
+            title: const Text('Configuración'),
+            onTap: () {
+              Navigator.pop(context);
+              context.push('/configuracion');
+            },
+          ),
+          const Divider(),
+          ListTile(
+            leading: const Icon(Icons.person),
+            title: const Text('Mi Perfil'),
+            onTap: () {
+              Navigator.pop(context);
+              // TODO: Implementar pantalla de perfil
+            },
+          ),
+          ListTile(
+            leading: const Icon(Icons.logout),
+            title: const Text('Cerrar Sesión'),
+            onTap: () async {
+              await provider.cerrarSesion();
+              if (context.mounted) {
+                context.go('/login');
+              }
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    final isMobile = MediaQuery.of(context).size.width < 600;
+
     return Consumer<CuadernoProvider>(
       builder: (context, provider, child) {
         if (provider.usuario == null) {
@@ -83,187 +214,191 @@ class _ProfesorHomeScreenState extends State<ProfesorHomeScreen> {
         }
 
         return Scaffold(
+          // Drawer para móvil
+          drawer: isMobile ? _buildDrawer(provider, context) : null,
           body: Row(
             children: [
-              // Menú lateral estilo Google Classroom
-              NavigationRail(
-                backgroundColor: Colors.white,
-                selectedIndex: _selectedIndex,
-                onDestinationSelected: (index) {
-                  setState(() {
-                    _selectedIndex = index;
-                  });
-                  // Actualizar la URL cuando cambias de tab
-                  context.go('/profesor/${_tabNames[index]}');
-                },
-                labelType: NavigationRailLabelType.all,
-                leading: Column(
-                  children: [
-                    const SizedBox(height: 8),
-                    // Logo o título
-                    Container(
-                      padding: const EdgeInsets.all(12),
-                      child: const Icon(
-                        Icons.school,
-                        size: 32,
-                        color: Color(0xFF1976D2),
+              // Menú lateral estilo Google Classroom (solo en desktop)
+              if (!isMobile)
+                NavigationRail(
+                  backgroundColor: Colors.white,
+                  selectedIndex: _selectedIndex,
+                  onDestinationSelected: (index) {
+                    setState(() {
+                      _selectedIndex = index;
+                    });
+                    // Actualizar la URL cuando cambias de tab
+                    context.go('/profesor/${_tabNames[index]}');
+                  },
+                  labelType: NavigationRailLabelType.all,
+                  leading: Column(
+                    children: [
+                      const SizedBox(height: 8),
+                      // Logo o título
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        child: const Icon(
+                          Icons.school,
+                          size: 32,
+                          color: Color(0xFF1976D2),
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 16),
-                  ],
-                ),
-                trailing: Expanded(
-                  child: Align(
-                    alignment: Alignment.bottomCenter,
-                    child: Padding(
-                      padding: const EdgeInsets.only(bottom: 16),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          // Icono de notificaciones con badge
-                          Consumer<NotificacionesProvider>(
-                            builder: (context, notifProvider, _) {
-                              final noLeidas =
-                                  notifProvider.notificacionesNoLeidas;
-                              return Stack(
-                                clipBehavior: Clip.none,
-                                children: [
-                                  IconButton(
-                                    icon: const Icon(
-                                      Icons.notifications_outlined,
+                      const SizedBox(height: 16),
+                    ],
+                  ),
+                  trailing: Expanded(
+                    child: Align(
+                      alignment: Alignment.bottomCenter,
+                      child: Padding(
+                        padding: const EdgeInsets.only(bottom: 16),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            // Icono de notificaciones con badge
+                            Consumer<NotificacionesProvider>(
+                              builder: (context, notifProvider, _) {
+                                final noLeidas =
+                                    notifProvider.notificacionesNoLeidas;
+                                return Stack(
+                                  clipBehavior: Clip.none,
+                                  children: [
+                                    IconButton(
+                                      icon: const Icon(
+                                        Icons.notifications_outlined,
+                                      ),
+                                      onPressed: () =>
+                                          context.push('/notificaciones'),
+                                      tooltip: 'Notificaciones',
                                     ),
-                                    onPressed: () =>
-                                        context.push('/notificaciones'),
-                                    tooltip: 'Notificaciones',
-                                  ),
-                                  if (noLeidas > 0)
-                                    Positioned(
-                                      right: 6,
-                                      top: 6,
-                                      child: Container(
-                                        padding: const EdgeInsets.all(4),
-                                        decoration: const BoxDecoration(
-                                          color: Colors.red,
-                                          shape: BoxShape.circle,
-                                        ),
-                                        constraints: const BoxConstraints(
-                                          minWidth: 18,
-                                          minHeight: 18,
-                                        ),
-                                        child: Text(
-                                          noLeidas > 9
-                                              ? '9+'
-                                              : noLeidas.toString(),
-                                          style: const TextStyle(
-                                            color: Colors.white,
-                                            fontSize: 10,
-                                            fontWeight: FontWeight.bold,
+                                    if (noLeidas > 0)
+                                      Positioned(
+                                        right: 6,
+                                        top: 6,
+                                        child: Container(
+                                          padding: const EdgeInsets.all(4),
+                                          decoration: const BoxDecoration(
+                                            color: Colors.red,
+                                            shape: BoxShape.circle,
                                           ),
-                                          textAlign: TextAlign.center,
+                                          constraints: const BoxConstraints(
+                                            minWidth: 18,
+                                            minHeight: 18,
+                                          ),
+                                          child: Text(
+                                            noLeidas > 9
+                                                ? '9+'
+                                                : noLeidas.toString(),
+                                            style: const TextStyle(
+                                              color: Colors.white,
+                                              fontSize: 10,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                            textAlign: TextAlign.center,
+                                          ),
                                         ),
                                       ),
-                                    ),
-                                ],
-                              );
-                            },
-                          ),
-                          const SizedBox(height: 8),
-                          IconButton(
-                            icon: const Icon(Icons.settings_outlined),
-                            onPressed: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (ctx) => const ConfiguracionScreen(),
-                                ),
-                              );
-                            },
-                            tooltip: 'Ajustes',
-                          ),
-                          const SizedBox(height: 8),
-                          PopupMenuButton<String>(
-                            onSelected: (value) {
-                              if (value == 'logout') {
-                                _cerrarSesion(provider);
-                              } else if (value == 'profile') {
+                                  ],
+                                );
+                              },
+                            ),
+                            const SizedBox(height: 8),
+                            IconButton(
+                              icon: const Icon(Icons.settings_outlined),
+                              onPressed: () {
                                 Navigator.push(
                                   context,
                                   MaterialPageRoute(
-                                    builder: (ctx) => const PerfilScreen(),
+                                    builder: (ctx) =>
+                                        const ConfiguracionScreen(),
                                   ),
                                 );
-                              }
-                            },
-                            itemBuilder: (context) => [
-                              PopupMenuItem(
-                                value: 'profile',
-                                child: Row(
-                                  children: const [
-                                    Icon(Icons.person),
-                                    SizedBox(width: 8),
-                                    Text('Mi Perfil'),
-                                  ],
+                              },
+                              tooltip: 'Ajustes',
+                            ),
+                            const SizedBox(height: 8),
+                            PopupMenuButton<String>(
+                              onSelected: (value) {
+                                if (value == 'logout') {
+                                  _cerrarSesion(provider);
+                                } else if (value == 'profile') {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (ctx) => const PerfilScreen(),
+                                    ),
+                                  );
+                                }
+                              },
+                              itemBuilder: (context) => [
+                                PopupMenuItem(
+                                  value: 'profile',
+                                  child: Row(
+                                    children: const [
+                                      Icon(Icons.person),
+                                      SizedBox(width: 8),
+                                      Text('Mi Perfil'),
+                                    ],
+                                  ),
                                 ),
-                              ),
-                              PopupMenuItem(
-                                value: 'logout',
-                                child: Row(
-                                  children: const [
-                                    Icon(Icons.logout),
-                                    SizedBox(width: 8),
-                                    Text('Cerrar Sesión'),
-                                  ],
+                                PopupMenuItem(
+                                  value: 'logout',
+                                  child: Row(
+                                    children: const [
+                                      Icon(Icons.logout),
+                                      SizedBox(width: 8),
+                                      Text('Cerrar Sesión'),
+                                    ],
+                                  ),
                                 ),
-                              ),
-                            ],
-                            child: CircleAvatar(
-                              backgroundColor: const Color(0xFF1976D2),
-                              child: Text(
-                                provider.usuario?.nombre
-                                        .substring(0, 1)
-                                        .toUpperCase() ??
-                                    'P',
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.bold,
+                              ],
+                              child: CircleAvatar(
+                                backgroundColor: const Color(0xFF1976D2),
+                                child: Text(
+                                  provider.usuario?.nombre
+                                          .substring(0, 1)
+                                          .toUpperCase() ??
+                                      'P',
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold,
+                                  ),
                                 ),
                               ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
                     ),
                   ),
+                  destinations: const [
+                    NavigationRailDestination(
+                      icon: Icon(Icons.home_outlined),
+                      selectedIcon: Icon(Icons.home),
+                      label: Text('Inicio'),
+                    ),
+                    NavigationRailDestination(
+                      icon: Icon(Icons.class_outlined),
+                      selectedIcon: Icon(Icons.class_),
+                      label: Text('Materias'),
+                    ),
+                    NavigationRailDestination(
+                      icon: Icon(Icons.how_to_reg_outlined),
+                      selectedIcon: Icon(Icons.how_to_reg),
+                      label: Text('Asistencia'),
+                    ),
+                    NavigationRailDestination(
+                      icon: Icon(Icons.assignment_outlined),
+                      selectedIcon: Icon(Icons.assignment),
+                      label: Text('Evidencias'),
+                    ),
+                    NavigationRailDestination(
+                      icon: Icon(Icons.assessment_outlined),
+                      selectedIcon: Icon(Icons.assessment),
+                      label: Text('Reportes'),
+                    ),
+                  ],
                 ),
-                destinations: const [
-                  NavigationRailDestination(
-                    icon: Icon(Icons.home_outlined),
-                    selectedIcon: Icon(Icons.home),
-                    label: Text('Inicio'),
-                  ),
-                  NavigationRailDestination(
-                    icon: Icon(Icons.class_outlined),
-                    selectedIcon: Icon(Icons.class_),
-                    label: Text('Materias'),
-                  ),
-                  NavigationRailDestination(
-                    icon: Icon(Icons.how_to_reg_outlined),
-                    selectedIcon: Icon(Icons.how_to_reg),
-                    label: Text('Asistencia'),
-                  ),
-                  NavigationRailDestination(
-                    icon: Icon(Icons.assignment_outlined),
-                    selectedIcon: Icon(Icons.assignment),
-                    label: Text('Evidencias'),
-                  ),
-                  NavigationRailDestination(
-                    icon: Icon(Icons.assessment_outlined),
-                    selectedIcon: Icon(Icons.assessment),
-                    label: Text('Reportes'),
-                  ),
-                ],
-              ),
-              const VerticalDivider(thickness: 1, width: 1),
+              if (!isMobile) const VerticalDivider(thickness: 1, width: 1),
               // Contenido principal
               Expanded(
                 child: Column(
@@ -284,6 +419,14 @@ class _ProfesorHomeScreenState extends State<ProfesorHomeScreen> {
                       ),
                       child: Row(
                         children: [
+                          if (isMobile)
+                            IconButton(
+                              icon: const Icon(Icons.menu),
+                              onPressed: () {
+                                Scaffold.of(context).openDrawer();
+                              },
+                              tooltip: 'Menú',
+                            ),
                           Text(
                             _getTituloPorSeccion(),
                             style: const TextStyle(
