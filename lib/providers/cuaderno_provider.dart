@@ -1136,7 +1136,8 @@ class CuadernoProvider extends ChangeNotifier {
         .where((a) => a.alumnoId == alumnoId && a.materiaId == materiaId)
         .toList();
 
-    if (asistenciasAlumno.isEmpty) return 0.0;
+    // Si no hay asistencias registradas, el alumno está al 100% (sin datos = sin problemas)
+    if (asistenciasAlumno.isEmpty) return 100.0;
     return AnalyticsUtils.porcentajeAsistencia(asistenciasAlumno);
   }
 
@@ -1144,27 +1145,21 @@ class CuadernoProvider extends ChangeNotifier {
     final evidenciasAlumno = _evidencias
         .where((e) => e.alumnoId == alumnoId && e.materiaId == materiaId)
         .toList();
-    if (evidenciasAlumno.isEmpty) return 0.0;
-    final materia = _materias.firstWhere(
-      (m) => m.id == materiaId,
-      orElse: () => Materia(
-        id: 'tmp',
-        nombre: 'tmp',
-        descripcion: '',
-        color: '#2196F3',
-        profesorId: _usuario?.id ?? '',
-        fechaCreacion: DateTime.now(),
-      ),
-    );
-    final total = materia.totalEvidenciasEsperadas == 0
-        ? 1
-        : materia.totalEvidenciasEsperadas;
+
+    // Si no hay evidencias asignadas, el alumno está al 100%
+    if (evidenciasAlumno.isEmpty) return 100.0;
+
+    // Contar cuántas evidencias fueron REALMENTE asignadas a este alumno
+    final totalAsignadas = evidenciasAlumno.length;
+
+    // Contar cuántas fueron entregadas (cualquier estado excepto "asignado")
     final entregadas = evidenciasAlumno
         .where((e) => e.estado != EstadoEvidencia.asignado)
         .length;
+
     return AnalyticsUtils.porcentajeEvidencias(
       entregadas: entregadas,
-      esperadas: total,
+      esperadas: totalAsignadas,
     );
   }
 
@@ -1248,8 +1243,13 @@ class CuadernoProvider extends ChangeNotifier {
           )
           .toList();
 
+      // Verificar si hay datos suficientes para evaluar
+      final tieneDatosSuficientes =
+          asistenciasRango.isNotEmpty || evidenciasRango.isNotEmpty;
+
+      // Calcular porcentajes (100% si no hay datos para no penalizar)
       final porcentajeAsist = asistenciasRango.isEmpty
-          ? 0.0
+          ? 100.0
           : AnalyticsUtils.porcentajeAsistencia(asistenciasRango);
 
       // Contar evidencias entregadas (cualquier estado diferente a "asignado")
@@ -1257,10 +1257,12 @@ class CuadernoProvider extends ChangeNotifier {
           .where((e) => e.estado != EstadoEvidencia.asignado)
           .length;
       final total = evidenciasRango.isEmpty ? 1 : evidenciasRango.length;
-      final porcentajeEvid = AnalyticsUtils.porcentajeEvidencias(
-        entregadas: entregadas,
-        esperadas: total,
-      );
+      final porcentajeEvid = evidenciasRango.isEmpty
+          ? 100.0
+          : AnalyticsUtils.porcentajeEvidencias(
+              entregadas: entregadas,
+              esperadas: total,
+            );
 
       final califs = _calificaciones
           .where((c) => c.alumnoId == alumno.id && c.materiaId == materiaId)
@@ -1301,6 +1303,7 @@ class CuadernoProvider extends ChangeNotifier {
           tieneRiesgo: tieneRiesgo,
           puedeExentar: puedeExent,
           requiereOrdinaria: requiereOrd,
+          tieneDatosSuficientes: tieneDatosSuficientes,
         ),
       );
     }

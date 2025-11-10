@@ -819,11 +819,54 @@ class _AlumnoHomeScreenState extends State<AlumnoHomeScreen> {
       provider.usuario!.id,
       materiaId,
     );
-    bool tieneRiesgo = provider.tieneRiesgoReprobacion(
-      provider.usuario!.id,
-      materiaId,
-    );
-    bool puedeExentar = provider.puedeExentar(provider.usuario!.id, materiaId);
+
+    // Verificar si hay datos suficientes
+    final asistencias = provider.asistencias
+        .where(
+          (a) => a.alumnoId == provider.usuario!.id && a.materiaId == materiaId,
+        )
+        .toList();
+    final evidencias = provider.evidencias
+        .where(
+          (e) => e.alumnoId == provider.usuario!.id && e.materiaId == materiaId,
+        )
+        .toList();
+    final tieneDatosSuficientes =
+        asistencias.isNotEmpty || evidencias.isNotEmpty;
+
+    bool tieneRiesgo =
+        tieneDatosSuficientes &&
+        provider.tieneRiesgoReprobacion(provider.usuario!.id, materiaId);
+    bool puedeExentar =
+        tieneDatosSuficientes &&
+        provider.puedeExentar(provider.usuario!.id, materiaId);
+
+    // Calcular porcentaje de evaluaciones aprobadas
+    final calificaciones = provider.calificaciones
+        .where(
+          (c) => c.alumnoId == provider.usuario!.id && c.materiaId == materiaId,
+        )
+        .toList();
+    int evaluacionesAprobadas = 0;
+    int evaluacionesTotales = 0;
+    if (calificaciones.isNotEmpty) {
+      final calif = calificaciones.first;
+      if (calif.examen != null) {
+        evaluacionesTotales++;
+        if (calif.examen! >= 6) evaluacionesAprobadas++;
+      }
+      if (calif.portafolioEvidencias != null) {
+        evaluacionesTotales++;
+        if (calif.portafolioEvidencias! >= 6) evaluacionesAprobadas++;
+      }
+      if (calif.actividadComplementaria != null) {
+        evaluacionesTotales++;
+        if (calif.actividadComplementaria! >= 6) evaluacionesAprobadas++;
+      }
+    }
+    final porcentajeEvaluaciones = evaluacionesTotales == 0
+        ? 100.0
+        : (evaluacionesAprobadas / evaluacionesTotales) * 100;
 
     return Column(
       children: [
@@ -836,7 +879,7 @@ class _AlumnoHomeScreenState extends State<AlumnoHomeScreen> {
                 porcentajeAsistencia >= 80 ? Colors.green : Colors.red,
               ),
             ),
-            const SizedBox(width: 16),
+            const SizedBox(width: 12),
             Expanded(
               child: _buildIndicador(
                 'Evidencias',
@@ -844,10 +887,47 @@ class _AlumnoHomeScreenState extends State<AlumnoHomeScreen> {
                 porcentajeEvidencias >= 50 ? Colors.green : Colors.red,
               ),
             ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: _buildIndicador(
+                'Evaluaciones',
+                evaluacionesTotales == 0
+                    ? 'Sin datos'
+                    : '$evaluacionesAprobadas/$evaluacionesTotales',
+                evaluacionesTotales == 0
+                    ? Colors.grey
+                    : (porcentajeEvaluaciones >= 66.7
+                          ? Colors.green
+                          : Colors.red),
+              ),
+            ),
           ],
         ),
         const SizedBox(height: 12),
-        if (puedeExentar)
+        if (!tieneDatosSuficientes)
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            decoration: BoxDecoration(
+              color: Colors.grey[200],
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: const [
+                Icon(Icons.info_outline, size: 16, color: Colors.grey),
+                SizedBox(width: 4),
+                Text(
+                  'Sin datos suficientes',
+                  style: TextStyle(
+                    color: Colors.grey,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 12,
+                  ),
+                ),
+              ],
+            ),
+          )
+        else if (puedeExentar)
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
             decoration: BoxDecoration(

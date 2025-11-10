@@ -34,7 +34,8 @@ class _AlumnoEvidenciasScreenState extends State<AlumnoEvidenciasScreen> {
       return true;
     }).toList();
 
-    final totalEsperadas = widget.materia.totalEvidenciasEsperadas;
+    // Usar el número REAL de evidencias asignadas, no el esperado teórico
+    final totalEsperadas = misEvidencias.length;
     final porcentaje = provider.calcularPorcentajeEvidencias(
       provider.usuario!.id,
       widget.materia.id,
@@ -111,7 +112,9 @@ class _AlumnoEvidenciasScreenState extends State<AlumnoEvidenciasScreen> {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        '${misEvidencias.length} de $totalEsperadas (${porcentaje.toStringAsFixed(1)}%)',
+                        totalEsperadas == 0
+                            ? 'Sin evidencias asignadas aún'
+                            : '${misEvidencias.where((e) => e.estado != EstadoEvidencia.asignado).length} de $totalEsperadas entregadas (${porcentaje.toStringAsFixed(1)}%)',
                         style: TextStyle(
                           fontSize: isMobile ? 11 : 12,
                           color: Colors.grey[700],

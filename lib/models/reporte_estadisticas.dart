@@ -53,6 +53,8 @@ class EstadisticaAlumno {
   final bool tieneRiesgo;
   final bool puedeExentar;
   final bool requiereOrdinaria; // Si reprobó 2+ evaluaciones
+  final bool
+  tieneDatosSuficientes; // Si hay asistencias O evidencias registradas
 
   EstadisticaAlumno({
     required this.alumnoId,
@@ -63,9 +65,11 @@ class EstadisticaAlumno {
     required this.tieneRiesgo,
     required this.puedeExentar,
     required this.requiereOrdinaria,
+    this.tieneDatosSuficientes = true,
   });
 
   String get estadoGeneral {
+    if (!tieneDatosSuficientes) return 'Sin datos';
     if (puedeExentar) return 'Exento';
     if (tieneRiesgo) return 'Riesgo';
     if (requiereOrdinaria) return 'Ordinaria';
