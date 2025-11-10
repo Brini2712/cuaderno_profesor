@@ -40,6 +40,121 @@ class _AlumnoHomeScreenState extends State<AlumnoHomeScreen> {
     });
   }
 
+  Widget _buildDrawer(CuadernoProvider provider, BuildContext context) {
+    return Drawer(
+      child: ListView(
+        padding: EdgeInsets.zero,
+        children: [
+          DrawerHeader(
+            decoration: const BoxDecoration(color: Color(0xFF1976D2)),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                const Icon(Icons.school, size: 48, color: Colors.white),
+                const SizedBox(height: 16),
+                Text(
+                  provider.usuario?.nombre ?? 'Alumno',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  provider.usuario?.email ?? '',
+                  style: const TextStyle(color: Colors.white70, fontSize: 14),
+                ),
+              ],
+            ),
+          ),
+          ListTile(
+            leading: const Icon(Icons.home),
+            title: const Text('Inicio'),
+            selected: _selectedIndex == 0,
+            onTap: () {
+              setState(() => _selectedIndex = 0);
+              Navigator.pop(context);
+            },
+          ),
+          ListTile(
+            leading: const Icon(Icons.class_),
+            title: const Text('Mis clases'),
+            selected: _selectedIndex == 1,
+            onTap: () {
+              setState(() => _selectedIndex = 1);
+              Navigator.pop(context);
+            },
+          ),
+          ListTile(
+            leading: const Icon(Icons.calendar_today),
+            title: const Text('Calendario'),
+            selected: _selectedIndex == 2,
+            onTap: () {
+              setState(() => _selectedIndex = 2);
+              Navigator.pop(context);
+            },
+          ),
+          const Divider(),
+          ListTile(
+            leading: const Icon(Icons.add_box),
+            title: const Text('Unirse a clase'),
+            onTap: () {
+              Navigator.pop(context);
+              _mostrarUnirseAClase(provider);
+            },
+          ),
+          Consumer<NotificacionesProvider>(
+            builder: (context, notifProvider, _) {
+              final noLeidas = notifProvider.notificacionesNoLeidas;
+              return ListTile(
+                leading: Badge(
+                  label: Text(noLeidas.toString()),
+                  isLabelVisible: noLeidas > 0,
+                  child: const Icon(Icons.notifications),
+                ),
+                title: const Text('Notificaciones'),
+                onTap: () {
+                  Navigator.pop(context);
+                  context.push('/notificaciones');
+                },
+              );
+            },
+          ),
+          ListTile(
+            leading: const Icon(Icons.settings),
+            title: const Text('Configuración'),
+            onTap: () {
+              Navigator.pop(context);
+              context.push('/configuracion');
+            },
+          ),
+          const Divider(),
+          ListTile(
+            leading: const Icon(Icons.person),
+            title: const Text('Mi Perfil'),
+            onTap: () {
+              Navigator.pop(context);
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (ctx) => const PerfilScreen()),
+              );
+            },
+          ),
+          ListTile(
+            leading: const Icon(Icons.logout),
+            title: const Text('Cerrar Sesión'),
+            onTap: () {
+              Navigator.pop(context);
+              _cerrarSesion(provider);
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final isMobile = MediaQuery.of(context).size.width < 600;
@@ -55,6 +170,7 @@ class _AlumnoHomeScreenState extends State<AlumnoHomeScreen> {
         // Layout móvil con BottomNavigationBar
         if (isMobile) {
           return Scaffold(
+            drawer: _buildDrawer(provider, context),
             appBar: AppBar(
               title: Text(_getTituloPorSeccion()),
               actions: [
