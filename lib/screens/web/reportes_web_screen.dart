@@ -145,8 +145,9 @@ class _ReportesWebScreenState extends State<ReportesWebScreen> {
                           Row(
                             children: [
                               Expanded(
+                                flex: 2,
                                 child: DropdownButtonFormField<String>(
-                                  initialValue: _materiaSeleccionada,
+                                  value: _materiaSeleccionada,
                                   decoration: const InputDecoration(
                                     labelText: 'Materia',
                                     border: OutlineInputBorder(),
@@ -155,7 +156,12 @@ class _ReportesWebScreenState extends State<ReportesWebScreen> {
                                       .map(
                                         (m) => DropdownMenuItem(
                                           value: m.id,
-                                          child: Text(m.nombre),
+                                          child: Text(
+                                            m.grupo != null &&
+                                                    m.grupo!.isNotEmpty
+                                                ? '${m.nombre} - Grupo ${m.grupo}'
+                                                : m.nombre,
+                                          ),
                                         ),
                                       )
                                       .toList(),
@@ -169,6 +175,7 @@ class _ReportesWebScreenState extends State<ReportesWebScreen> {
                               ),
                               const SizedBox(width: 16),
                               Expanded(
+                                flex: 2,
                                 child: SegmentedButton<RangoPreset>(
                                   segments: const [
                                     ButtonSegment(

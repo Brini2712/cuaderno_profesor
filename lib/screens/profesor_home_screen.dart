@@ -25,6 +25,7 @@ class ProfesorHomeScreen extends StatefulWidget {
 
 class _ProfesorHomeScreenState extends State<ProfesorHomeScreen> {
   int _selectedIndex = 0;
+  String? _grupoFiltroSeleccionado; // null = todos los grupos
 
   // Mapeo de nombres de tab a índices
   static const Map<String, int> _tabIndices = {
@@ -352,11 +353,111 @@ class _ProfesorHomeScreenState extends State<ProfesorHomeScreen> {
     }
   }
 
+  /// Construye el widget de filtro por grupo
+  Widget _buildFiltroGrupos(CuadernoProvider provider) {
+    // Extraer grupos únicos de las materias
+    final grupos =
+        provider.materias
+            .where((m) => m.grupo != null && m.grupo!.isNotEmpty)
+            .map((m) => m.grupo!)
+            .toSet()
+            .toList()
+          ..sort();
+
+    // Si no hay grupos, no mostrar el filtro
+    if (grupos.isEmpty) return const SizedBox.shrink();
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
+        border: Border(
+          bottom: BorderSide(color: Theme.of(context).dividerColor, width: 1),
+        ),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            Icons.filter_list,
+            size: 20,
+            color: Theme.of(context).colorScheme.primary,
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: DropdownButtonFormField<String?>(
+              value: _grupoFiltroSeleccionado,
+              decoration: InputDecoration(
+                labelText: 'Filtrar por grupo',
+                labelStyle: TextStyle(
+                  fontSize: 14,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 8,
+                ),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                isDense: true,
+              ),
+              isExpanded: true,
+              items: [
+                DropdownMenuItem<String?>(
+                  value: null,
+                  child: Text(
+                    'Todos los grupos (${provider.materias.length})',
+                    style: const TextStyle(fontWeight: FontWeight.w500),
+                  ),
+                ),
+                ...grupos.map((grupo) {
+                  final cantidad = provider.materias
+                      .where((m) => m.grupo == grupo)
+                      .length;
+                  return DropdownMenuItem<String?>(
+                    value: grupo,
+                    child: Text('Grupo $grupo ($cantidad)'),
+                  );
+                }),
+              ],
+              onChanged: (value) {
+                setState(() {
+                  _grupoFiltroSeleccionado = value;
+                });
+              },
+            ),
+          ),
+          if (_grupoFiltroSeleccionado != null) ...[
+            const SizedBox(width: 8),
+            IconButton(
+              icon: const Icon(Icons.clear, size: 20),
+              tooltip: 'Limpiar filtro',
+              onPressed: () {
+                setState(() {
+                  _grupoFiltroSeleccionado = null;
+                });
+              },
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
   Widget _buildInicioTab(CuadernoProvider provider) {
     final totalMaterias = provider.materias.length;
     final totalAlumnos = provider.alumnos.length;
     final materiasActivas = provider.materias
         .where((m) => m.alumnosIds.isNotEmpty)
+        .length;
+
+    // Calcular grupos únicos
+    final gruposUnicos = provider.materias
+        .where((m) => m.grupo != null && m.grupo!.isNotEmpty)
+        .map((m) => m.grupo!)
+        .toSet()
         .length;
 
     return RefreshIndicator(
@@ -411,6 +512,15 @@ class _ProfesorHomeScreenState extends State<ProfesorHomeScreen> {
                 subtitle: 'Registros totales',
                 color: Colors.purple,
                 onTap: () => setState(() => _selectedIndex = 2),
+              ),
+              _buildStatCard(
+                icon: Icons.groups,
+                title: 'Grupos',
+                value: gruposUnicos.toString(),
+                subtitle: gruposUnicos == 1
+                    ? 'Grupo único'
+                    : 'Grupos diferentes',
+                color: Colors.teal,
               ),
             ],
           ),
@@ -530,6 +640,13 @@ class _ProfesorHomeScreenState extends State<ProfesorHomeScreen> {
   }
 
   Widget _buildMateriasTab(CuadernoProvider provider) {
+    // Filtrar materias por grupo seleccionado
+    final materiasFiltradas = _grupoFiltroSeleccionado == null
+        ? provider.materias
+        : provider.materias
+              .where((m) => m.grupo == _grupoFiltroSeleccionado)
+              .toList();
+
     return RefreshIndicator(
       onRefresh: () => provider.cargarDatos(),
       child: provider.materias.isEmpty
@@ -540,25 +657,76 @@ class _ProfesorHomeScreenState extends State<ProfesorHomeScreen> {
               actionText: 'Crear Materia',
               onAction: () => _mostrarCrearMateria(provider),
             )
-          : ListView.builder(
-              padding: const EdgeInsets.all(16),
-              itemCount: provider.materias.length,
-              itemBuilder: (context, index) {
-                final materia = provider.materias[index];
-                return MateriaCard(
-                  materia: materia,
-                  onTap: () => _navegarAMateria(materia),
-                  onEditar: () => _editarMateria(context, provider, materia),
-                  onEliminar: () =>
-                      _confirmarEliminar(context, provider, materia),
-                  onCopiarCodigo: () => _copiarCodigo(context, materia),
-                );
-              },
+          : Column(
+              children: [
+                // Filtro de grupos
+                _buildFiltroGrupos(provider),
+                // Lista de materias filtradas
+                Expanded(
+                  child: materiasFiltradas.isEmpty
+                      ? Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.filter_list_off,
+                                size: 64,
+                                color: Colors.grey[400],
+                              ),
+                              const SizedBox(height: 16),
+                              Text(
+                                'No hay materias en el grupo "$_grupoFiltroSeleccionado"',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  color: Colors.grey[600],
+                                ),
+                              ),
+                              const SizedBox(height: 16),
+                              TextButton(
+                                onPressed: () {
+                                  setState(() {
+                                    _grupoFiltroSeleccionado = null;
+                                  });
+                                },
+                                child: const Text('Ver todas las materias'),
+                              ),
+                            ],
+                          ),
+                        )
+                      : ListView.builder(
+                          padding: const EdgeInsets.all(16),
+                          itemCount: materiasFiltradas.length,
+                          itemBuilder: (context, index) {
+                            final materia = materiasFiltradas[index];
+                            return MateriaCard(
+                              materia: materia,
+                              onTap: () => _navegarAMateria(materia),
+                              onEditar: () =>
+                                  _editarMateria(context, provider, materia),
+                              onEliminar: () => _confirmarEliminar(
+                                context,
+                                provider,
+                                materia,
+                              ),
+                              onCopiarCodigo: () =>
+                                  _copiarCodigo(context, materia),
+                            );
+                          },
+                        ),
+                ),
+              ],
             ),
     );
   }
 
   Widget _buildAsistenciasTab(CuadernoProvider provider) {
+    // Aplicar filtro de grupo
+    final materiasFiltradas = _grupoFiltroSeleccionado == null
+        ? provider.materias
+        : provider.materias
+              .where((m) => m.grupo == _grupoFiltroSeleccionado)
+              .toList();
+
     if (provider.materias.isEmpty) {
       return RefreshIndicator(
         onRefresh: () => provider.cargarDatos(),
@@ -574,37 +742,90 @@ class _ProfesorHomeScreenState extends State<ProfesorHomeScreen> {
 
     return RefreshIndicator(
       onRefresh: () => provider.cargarDatos(),
-      child: ListView.builder(
-        padding: const EdgeInsets.all(16),
-        itemCount: provider.materias.length,
-        itemBuilder: (context, index) {
-          final m = provider.materias[index];
-          return Card(
-            margin: const EdgeInsets.only(bottom: 16),
-            child: ListTile(
-              leading: Container(
-                width: 6,
-                height: double.infinity,
-                color: Color(int.parse(m.color.replaceAll('#', '0xFF'))),
-              ),
-              title: Text(
-                m.nombre,
-                style: const TextStyle(fontWeight: FontWeight.bold),
-              ),
-              subtitle: Text(m.descripcion),
-              trailing: ElevatedButton.icon(
-                icon: const Icon(Icons.fact_check),
-                label: const Text('Tomar asistencia'),
-                onPressed: () => _abrirTomarAsistencia(m),
-              ),
-            ),
-          );
-        },
+      child: Column(
+        children: [
+          // Filtro de grupos
+          _buildFiltroGrupos(provider),
+          // Lista de materias filtradas
+          Expanded(
+            child: materiasFiltradas.isEmpty
+                ? Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.filter_list_off,
+                          size: 64,
+                          color: Colors.grey[400],
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          'No hay materias en el grupo "$_grupoFiltroSeleccionado"',
+                          style: TextStyle(
+                            fontSize: 16,
+                            color: Colors.grey[600],
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        TextButton(
+                          onPressed: () {
+                            setState(() {
+                              _grupoFiltroSeleccionado = null;
+                            });
+                          },
+                          child: const Text('Ver todas las materias'),
+                        ),
+                      ],
+                    ),
+                  )
+                : ListView.builder(
+                    padding: const EdgeInsets.all(16),
+                    itemCount: materiasFiltradas.length,
+                    itemBuilder: (context, index) {
+                      final m = materiasFiltradas[index];
+                      final numAlumnos = m.alumnosIds.length;
+                      return Card(
+                        margin: const EdgeInsets.only(bottom: 16),
+                        child: ListTile(
+                          leading: Container(
+                            width: 6,
+                            height: double.infinity,
+                            color: Color(
+                              int.parse(m.color.replaceAll('#', '0xFF')),
+                            ),
+                          ),
+                          title: Text(
+                            m.grupo != null && m.grupo!.isNotEmpty
+                                ? '${m.nombre} - Grupo ${m.grupo}'
+                                : m.nombre,
+                            style: const TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                          subtitle: Text(
+                            '$numAlumnos estudiante${numAlumnos != 1 ? 's' : ''}',
+                          ),
+                          trailing: ElevatedButton.icon(
+                            icon: const Icon(Icons.fact_check),
+                            label: const Text('Tomar asistencia'),
+                            onPressed: () => _abrirTomarAsistencia(m),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+          ),
+        ],
       ),
     );
   }
 
   Widget _buildEvidenciasTab(CuadernoProvider provider) {
+    // Aplicar filtro de grupo
+    final materiasFiltradas = _grupoFiltroSeleccionado == null
+        ? provider.materias
+        : provider.materias
+              .where((m) => m.grupo == _grupoFiltroSeleccionado)
+              .toList();
+
     if (provider.materias.isEmpty) {
       return RefreshIndicator(
         onRefresh: () => provider.cargarDatos(),
@@ -620,35 +841,81 @@ class _ProfesorHomeScreenState extends State<ProfesorHomeScreen> {
 
     return RefreshIndicator(
       onRefresh: () => provider.cargarDatos(),
-      child: ListView.builder(
-        padding: const EdgeInsets.all(16),
-        itemCount: provider.materias.length,
-        itemBuilder: (context, index) {
-          final m = provider.materias[index];
-          final numEvidencias = provider.contarEvidenciasUnicas(
-            materiaId: m.id,
-          );
-          return Card(
-            margin: const EdgeInsets.only(bottom: 16),
-            child: ListTile(
-              leading: Container(
-                width: 6,
-                height: double.infinity,
-                color: Color(int.parse(m.color.replaceAll('#', '0xFF'))),
-              ),
-              title: Text(
-                m.nombre,
-                style: const TextStyle(fontWeight: FontWeight.bold),
-              ),
-              subtitle: Text('$numEvidencias evidencias registradas'),
-              trailing: ElevatedButton.icon(
-                icon: const Icon(Icons.assignment),
-                label: const Text('Gestionar'),
-                onPressed: () => _abrirGestionEvidencias(m),
-              ),
-            ),
-          );
-        },
+      child: Column(
+        children: [
+          // Filtro de grupos
+          _buildFiltroGrupos(provider),
+          // Lista de materias filtradas
+          Expanded(
+            child: materiasFiltradas.isEmpty
+                ? Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.filter_list_off,
+                          size: 64,
+                          color: Colors.grey[400],
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          'No hay materias en el grupo "$_grupoFiltroSeleccionado"',
+                          style: TextStyle(
+                            fontSize: 16,
+                            color: Colors.grey[600],
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        TextButton(
+                          onPressed: () {
+                            setState(() {
+                              _grupoFiltroSeleccionado = null;
+                            });
+                          },
+                          child: const Text('Ver todas las materias'),
+                        ),
+                      ],
+                    ),
+                  )
+                : ListView.builder(
+                    padding: const EdgeInsets.all(16),
+                    itemCount: materiasFiltradas.length,
+                    itemBuilder: (context, index) {
+                      final m = materiasFiltradas[index];
+                      final numEvidencias = provider.contarEvidenciasUnicas(
+                        materiaId: m.id,
+                      );
+                      final numAlumnos = m.alumnosIds.length;
+                      return Card(
+                        margin: const EdgeInsets.only(bottom: 16),
+                        child: ListTile(
+                          leading: Container(
+                            width: 6,
+                            height: double.infinity,
+                            color: Color(
+                              int.parse(m.color.replaceAll('#', '0xFF')),
+                            ),
+                          ),
+                          title: Text(
+                            m.grupo != null && m.grupo!.isNotEmpty
+                                ? '${m.nombre} - Grupo ${m.grupo}'
+                                : m.nombre,
+                            style: const TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                          subtitle: Text(
+                            '$numAlumnos estudiante${numAlumnos != 1 ? 's' : ''} • $numEvidencias evidencia${numEvidencias != 1 ? 's' : ''} registrada${numEvidencias != 1 ? 's' : ''}',
+                          ),
+                          trailing: ElevatedButton.icon(
+                            icon: const Icon(Icons.assignment),
+                            label: const Text('Gestionar'),
+                            onPressed: () => _abrirGestionEvidencias(m),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+          ),
+        ],
       ),
     );
   }
