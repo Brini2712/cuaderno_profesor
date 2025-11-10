@@ -38,9 +38,9 @@ class _ConfiguracionScreenState extends State<ConfiguracionScreen> {
               ),
               if (_notificacionesActivas) ...[
                 SwitchListTile(
-                  title: const Text('Recordatorios de evidencias'),
+                  title: const Text('Recordatorios de actividades'),
                   subtitle: const Text(
-                    'Notificar sobre evidencias próximas a vencer',
+                    'Notificar sobre actividades próximas a vencer',
                   ),
                   value: _recordatoriosEvidencias,
                   onChanged: (value) {

@@ -149,7 +149,7 @@ class _GestionEvidenciasScreenState extends State<GestionEvidenciasScreen> {
       floatingActionButton: FloatingActionButton.extended(
         onPressed: _crearEvidencia,
         icon: const Icon(Icons.add),
-        label: const Text('Nueva evidencia'),
+        label: const Text('Nueva actividad'),
       ),
     );
   }
@@ -490,7 +490,7 @@ class _FormularioEvidenciaScreenState extends State<FormularioEvidenciaScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          widget.evidencia == null ? 'Nueva evidencia' : 'Editar evidencia',
+          widget.evidencia == null ? 'Nueva actividad' : 'Editar actividad',
         ),
         actions: [
           Padding(

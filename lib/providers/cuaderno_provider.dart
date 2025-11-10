@@ -1388,6 +1388,9 @@ class CuadernoProvider extends ChangeNotifier {
       // Calcular calificación final basada en evidencias calificadas
       // agrupadas por tipo según criterio: Examen 40% + Portafolio 40% + Actividad 20%
       double? calificacionFinal;
+      double? promedioExamen;
+      double? promedioPortafolio;
+      double? promedioActividad;
 
       final evidenciasCalificadas = evidenciasRango
           .where((e) => e.estado == EstadoEvidencia.calificado)
@@ -1395,9 +1398,6 @@ class CuadernoProvider extends ChangeNotifier {
 
       if (evidenciasCalificadas.isNotEmpty) {
         // Calcular promedio por tipo de evidencia
-        double? promedioExamen;
-        double? promedioPortafolio;
-        double? promedioActividad;
 
         // Examenes
         final examenes = evidenciasCalificadas
@@ -1442,28 +1442,16 @@ class CuadernoProvider extends ChangeNotifier {
         }
 
         // Calcular calificación final con los porcentajes del criterio
-        // Solo si tenemos al menos un componente
-        if (promedioExamen != null ||
-            promedioPortafolio != null ||
+        // Criterio: Examen 40% + Portafolio 40% + Actividad 20%
+        // Se requieren los 3 componentes para calcular la calificación final
+        if (promedioExamen != null &&
+            promedioPortafolio != null &&
             promedioActividad != null) {
-          double suma = 0.0;
-          double pesoTotal = 0.0;
-
-          if (promedioExamen != null) {
-            suma += promedioExamen * 0.4;
-            pesoTotal += 0.4;
-          }
-          if (promedioPortafolio != null) {
-            suma += promedioPortafolio * 0.4;
-            pesoTotal += 0.4;
-          }
-          if (promedioActividad != null) {
-            suma += promedioActividad * 0.2;
-            pesoTotal += 0.2;
-          }
-
-          // Normalizar si no están todos los componentes
-          calificacionFinal = pesoTotal > 0 ? suma / pesoTotal : null;
+          // Aplicar los porcentajes definidos en el criterio de evaluación
+          calificacionFinal =
+              (promedioExamen * 0.4) +
+              (promedioPortafolio * 0.4) +
+              (promedioActividad * 0.2);
         }
       }
 
@@ -1479,6 +1467,9 @@ class CuadernoProvider extends ChangeNotifier {
           requiereOrdinaria: requiereOrd,
           tieneDatosSuficientes: tieneDatosSuficientes,
           calificacionFinal: calificacionFinal,
+          promedioExamen: promedioExamen,
+          promedioPortafolio: promedioPortafolio,
+          promedioActividad: promedioActividad,
         ),
       );
     }

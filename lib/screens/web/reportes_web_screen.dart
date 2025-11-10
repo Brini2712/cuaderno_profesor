@@ -271,8 +271,12 @@ class _ReportesWebScreenState extends State<ReportesWebScreen> {
                   // Resumen general
                   if (_reporte != null) ...[
                     _buildResumenGeneral(_reporte!),
+                    const SizedBox(height: 16),
+                    _buildCriterioEvaluacion(),
                     const SizedBox(height: 24),
                     _buildGraficos(_reporte!),
+                    const SizedBox(height: 24),
+                    _buildGraficoComponentes(_reporte!),
                     const SizedBox(height: 24),
                     _buildTablaAlumnos(_reporte!),
                   ] else
@@ -703,6 +707,277 @@ class _ReportesWebScreenState extends State<ReportesWebScreen> {
             ),
           ),
         ),
+      ],
+    );
+  }
+
+  Widget _buildCriterioEvaluacion() {
+    return Card(
+      elevation: 2,
+      color: Colors.blue.shade50,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          children: [
+            Icon(Icons.info_outline, color: Colors.blue.shade700, size: 32),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Criterio de Evaluación',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.blue.shade900,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'La calificación final se calcula con: Examen 40% + Portafolio 40% + Actividad complementaria 20%',
+                    style: TextStyle(fontSize: 14, color: Colors.blue.shade800),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Nota: Se requieren calificaciones en los 3 componentes para calcular el promedio final.',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.blue.shade700,
+                      fontStyle: FontStyle.italic,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildGraficoComponentes(ReporteEstadisticas reporte) {
+    // Filtrar solo alumnos con al menos un componente
+    final alumnosConDatos = reporte.estadisticasAlumnos
+        .where(
+          (a) =>
+              a.promedioExamen != null ||
+              a.promedioPortafolio != null ||
+              a.promedioActividad != null,
+        )
+        .toList();
+
+    if (alumnosConDatos.isEmpty) {
+      return Card(
+        elevation: 2,
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            children: [
+              const Text(
+                'Componentes de Calificación por Alumno',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                'No hay calificaciones registradas aún',
+                style: TextStyle(color: Colors.grey),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    // Limitar a los primeros 10 alumnos para mejor visualización
+    final alumnosMostrar = alumnosConDatos.take(10).toList();
+
+    return Card(
+      elevation: 2,
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Componentes de Calificación por Alumno',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Examen (40%) • Portafolio (40%) • Actividad (20%)',
+              style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+            ),
+            if (alumnosConDatos.length > 10)
+              Text(
+                'Mostrando los primeros 10 de ${alumnosConDatos.length} alumnos',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Colors.grey[500],
+                  fontStyle: FontStyle.italic,
+                ),
+              ),
+            const SizedBox(height: 16),
+            SizedBox(
+              height: 400,
+              child: BarChart(
+                BarChartData(
+                  alignment: BarChartAlignment.spaceAround,
+                  maxY: 100,
+                  minY: 0,
+                  barTouchData: BarTouchData(
+                    enabled: true,
+                    touchTooltipData: BarTouchTooltipData(
+                      getTooltipItem: (group, groupIndex, rod, rodIndex) {
+                        final alumno = alumnosMostrar[group.x.toInt()];
+                        String componente = '';
+                        double? valor;
+
+                        switch (rodIndex) {
+                          case 0:
+                            componente = 'Examen';
+                            valor = alumno.promedioExamen;
+                            break;
+                          case 1:
+                            componente = 'Portafolio';
+                            valor = alumno.promedioPortafolio;
+                            break;
+                          case 2:
+                            componente = 'Actividad';
+                            valor = alumno.promedioActividad;
+                            break;
+                        }
+
+                        return BarTooltipItem(
+                          '$componente\n${valor?.toStringAsFixed(1) ?? 'N/A'}',
+                          const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                  titlesData: FlTitlesData(
+                    show: true,
+                    bottomTitles: AxisTitles(
+                      sideTitles: SideTitles(
+                        showTitles: true,
+                        reservedSize: 80,
+                        getTitlesWidget: (value, meta) {
+                          if (value.toInt() >= alumnosMostrar.length) {
+                            return const SizedBox();
+                          }
+                          final alumno = alumnosMostrar[value.toInt()];
+                          final nombre = alumno.alumnoNombre.split(' ').first;
+                          return Padding(
+                            padding: const EdgeInsets.only(top: 8),
+                            child: RotatedBox(
+                              quarterTurns: -1,
+                              child: Text(
+                                nombre,
+                                style: const TextStyle(fontSize: 11),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                    leftTitles: AxisTitles(
+                      sideTitles: SideTitles(
+                        showTitles: true,
+                        reservedSize: 40,
+                        getTitlesWidget: (value, meta) {
+                          return Text('${value.toInt()}');
+                        },
+                      ),
+                    ),
+                    topTitles: const AxisTitles(
+                      sideTitles: SideTitles(showTitles: false),
+                    ),
+                    rightTitles: const AxisTitles(
+                      sideTitles: SideTitles(showTitles: false),
+                    ),
+                  ),
+                  borderData: FlBorderData(show: true),
+                  gridData: const FlGridData(
+                    show: true,
+                    drawVerticalLine: false,
+                  ),
+                  barGroups: List.generate(alumnosMostrar.length, (index) {
+                    final alumno = alumnosMostrar[index];
+                    return BarChartGroupData(
+                      x: index,
+                      barRods: [
+                        // Examen (40%) - Naranja
+                        BarChartRodData(
+                          toY: alumno.promedioExamen ?? 0,
+                          color: Colors.orange,
+                          width: 12,
+                          borderRadius: const BorderRadius.only(
+                            topLeft: Radius.circular(4),
+                            topRight: Radius.circular(4),
+                          ),
+                        ),
+                        // Portafolio (40%) - Azul
+                        BarChartRodData(
+                          toY: alumno.promedioPortafolio ?? 0,
+                          color: Colors.blue,
+                          width: 12,
+                          borderRadius: const BorderRadius.only(
+                            topLeft: Radius.circular(4),
+                            topRight: Radius.circular(4),
+                          ),
+                        ),
+                        // Actividad (20%) - Verde
+                        BarChartRodData(
+                          toY: alumno.promedioActividad ?? 0,
+                          color: Colors.green,
+                          width: 12,
+                          borderRadius: const BorderRadius.only(
+                            topLeft: Radius.circular(4),
+                            topRight: Radius.circular(4),
+                          ),
+                        ),
+                      ],
+                    );
+                  }),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            // Leyenda
+            Wrap(
+              spacing: 24,
+              runSpacing: 8,
+              alignment: WrapAlignment.center,
+              children: [
+                _buildLeyendaItem(Colors.orange, 'Examen (40%)'),
+                _buildLeyendaItem(Colors.blue, 'Portafolio (40%)'),
+                _buildLeyendaItem(Colors.green, 'Actividad (20%)'),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildLeyendaItem(Color color, String label) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 16,
+          height: 16,
+          decoration: BoxDecoration(
+            color: color,
+            borderRadius: BorderRadius.circular(4),
+          ),
+        ),
+        const SizedBox(width: 8),
+        Text(label, style: const TextStyle(fontSize: 13)),
       ],
     );
   }

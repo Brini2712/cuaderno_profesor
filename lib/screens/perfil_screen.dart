@@ -280,7 +280,7 @@ class _PerfilScreenState extends State<PerfilScreen> {
               const SizedBox(height: 12),
               _buildStatRow(
                 Icons.assignment,
-                'Evidencias asignadas',
+                'Actividades asignadas',
                 totalEvidencias.toString(),
               ),
             ],
@@ -315,13 +315,13 @@ class _PerfilScreenState extends State<PerfilScreen> {
               const SizedBox(height: 12),
               _buildStatRow(
                 Icons.assignment,
-                'Evidencias asignadas',
+                'Actividades asignadas',
                 evidenciasAlumno.length.toString(),
               ),
               const SizedBox(height: 12),
               _buildStatRow(
                 Icons.check_circle,
-                'Evidencias entregadas',
+                'Actividades entregadas',
                 evidenciasEntregadas.toString(),
               ),
             ],

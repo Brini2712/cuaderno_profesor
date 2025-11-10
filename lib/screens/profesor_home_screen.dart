@@ -133,7 +133,7 @@ class _ProfesorHomeScreenState extends State<ProfesorHomeScreen> {
           ),
           ListTile(
             leading: const Icon(Icons.assignment),
-            title: const Text('Evidencias'),
+            title: const Text('Actividades'),
             selected: _selectedIndex == 3,
             onTap: () {
               setState(() => _selectedIndex = 3);
@@ -389,7 +389,7 @@ class _ProfesorHomeScreenState extends State<ProfesorHomeScreen> {
                     NavigationRailDestination(
                       icon: Icon(Icons.assignment_outlined),
                       selectedIcon: Icon(Icons.assignment),
-                      label: Text('Evidencias'),
+                      label: Text('Actividades'),
                     ),
                     NavigationRailDestination(
                       icon: Icon(Icons.assessment_outlined),
@@ -488,7 +488,7 @@ class _ProfesorHomeScreenState extends State<ProfesorHomeScreen> {
       case 2:
         return 'Asistencia';
       case 3:
-        return 'Evidencias';
+        return 'Actividades';
       case 4:
         return 'Reportes';
       default:
@@ -642,7 +642,7 @@ class _ProfesorHomeScreenState extends State<ProfesorHomeScreen> {
               ),
               _buildStatCard(
                 icon: Icons.assignment,
-                title: 'Evidencias',
+                title: 'Actividades',
                 value: provider.contarEvidenciasUnicas().toString(),
                 subtitle: 'Conjuntos únicos',
                 color: Colors.orange,
@@ -974,7 +974,7 @@ class _ProfesorHomeScreenState extends State<ProfesorHomeScreen> {
         onRefresh: () => provider.cargarDatos(),
         child: _buildEmptyState(
           icon: Icons.assignment,
-          title: 'Sin materias para gestionar evidencias',
+          title: 'Sin materias para gestionar actividades',
           subtitle: 'Crea una materia primero',
           actionText: 'Crear Materia',
           onAction: () => _mostrarCrearMateria(provider),
@@ -1046,7 +1046,8 @@ class _ProfesorHomeScreenState extends State<ProfesorHomeScreen> {
                             style: const TextStyle(fontWeight: FontWeight.bold),
                           ),
                           subtitle: Text(
-                            '$numAlumnos estudiante${numAlumnos != 1 ? 's' : ''} • $numEvidencias evidencia${numEvidencias != 1 ? 's' : ''} registrada${numEvidencias != 1 ? 's' : ''}',
+                            '$numAlumnos estudiante${numAlumnos != 1 ? 's' : ''} • $numEvidencias actividad${numEvidencias != 1 ? 'es' : ''} registrada${numEvidencias != 1 ? 's' : ''}',
+                            style: Theme.of(context).textTheme.bodySmall,
                           ),
                           trailing: ElevatedButton.icon(
                             icon: const Icon(Icons.assignment),

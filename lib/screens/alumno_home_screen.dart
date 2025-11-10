@@ -751,7 +751,7 @@ class _AlumnoHomeScreenState extends State<AlumnoHomeScreen> {
         ),
         _buildStatCardAlumno(
           icon: Icons.assignment,
-          title: 'Evidencias',
+          title: 'Actividades',
           value: '$evidenciasEntregadas/$totalEvidencias',
           color: Colors.green,
         ),

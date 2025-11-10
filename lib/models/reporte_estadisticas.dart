@@ -68,7 +68,13 @@ class EstadisticaAlumno {
   final bool
   tieneDatosSuficientes; // Si hay asistencias O evidencias registradas
   final double?
-  calificacionFinal; // Promedio de todas las evidencias calificadas
+  calificacionFinal; // Promedio final con criterio: Examen 40% + Portafolio 40% + Actividad 20%
+
+  // Promedios por tipo de actividad
+  final double? promedioExamen; // Promedio de exámenes (40%)
+  final double? promedioPortafolio; // Promedio de portafolios (40%)
+  final double?
+  promedioActividad; // Promedio de actividades complementarias (20%)
 
   EstadisticaAlumno({
     required this.alumnoId,
@@ -81,6 +87,9 @@ class EstadisticaAlumno {
     required this.requiereOrdinaria,
     this.tieneDatosSuficientes = true,
     this.calificacionFinal,
+    this.promedioExamen,
+    this.promedioPortafolio,
+    this.promedioActividad,
   });
 
   String get estadoGeneral {
