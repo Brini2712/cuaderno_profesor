@@ -8,6 +8,7 @@ import '../models/materia.dart';
 import '../models/evidencia.dart';
 import 'alumno/alumno_evidencias_screen.dart';
 import 'alumno/calendario_alumno_widget.dart';
+import 'alumno/tareas_pendientes_screen.dart';
 import 'perfil_screen.dart';
 import 'configuracion_screen.dart';
 
@@ -97,6 +98,34 @@ class _AlumnoHomeScreenState extends State<AlumnoHomeScreen> {
             },
           ),
           const Divider(),
+          Builder(
+            builder: (context) {
+              final tareasPendientes = provider.evidencias
+                  .where(
+                    (e) =>
+                        e.alumnoId == provider.usuario!.id &&
+                        e.estado == EstadoEvidencia.asignado,
+                  )
+                  .length;
+              return ListTile(
+                leading: Badge(
+                  label: Text(tareasPendientes.toString()),
+                  isLabelVisible: tareasPendientes > 0,
+                  child: const Icon(Icons.assignment),
+                ),
+                title: const Text('Tareas pendientes'),
+                onTap: () {
+                  Navigator.pop(context);
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (ctx) => const TareasPendientesScreen(),
+                    ),
+                  );
+                },
+              );
+            },
+          ),
           ListTile(
             leading: const Icon(Icons.add_box),
             title: const Text('Unirse a clase'),
@@ -313,10 +342,11 @@ class _AlumnoHomeScreenState extends State<AlumnoHomeScreen> {
                 _buildInicioTab(provider),
                 _buildMisClasesTab(provider),
                 _buildCalendarioTab(provider),
+                const TareasPendientesScreen(),
               ],
             ),
             bottomNavigationBar: BottomNavigationBar(
-              currentIndex: _selectedIndex,
+              currentIndex: _selectedIndex > 2 ? 0 : _selectedIndex,
               onTap: (index) {
                 setState(() {
                   _selectedIndex = index;
@@ -519,21 +549,56 @@ class _AlumnoHomeScreenState extends State<AlumnoHomeScreen> {
                     ),
                   ),
                 ),
-                destinations: const [
-                  NavigationRailDestination(
+                destinations: [
+                  const NavigationRailDestination(
                     icon: Icon(Icons.home_outlined),
                     selectedIcon: Icon(Icons.home),
                     label: Text('Inicio'),
                   ),
-                  NavigationRailDestination(
+                  const NavigationRailDestination(
                     icon: Icon(Icons.class_outlined),
                     selectedIcon: Icon(Icons.class_),
                     label: Text('Mis clases'),
                   ),
-                  NavigationRailDestination(
+                  const NavigationRailDestination(
                     icon: Icon(Icons.calendar_today_outlined),
                     selectedIcon: Icon(Icons.calendar_today),
                     label: Text('Calendario'),
+                  ),
+                  NavigationRailDestination(
+                    icon: Builder(
+                      builder: (context) {
+                        final tareasPendientes = provider.evidencias
+                            .where(
+                              (e) =>
+                                  e.alumnoId == provider.usuario!.id &&
+                                  e.estado == EstadoEvidencia.asignado,
+                            )
+                            .length;
+                        return Badge(
+                          label: Text(tareasPendientes.toString()),
+                          isLabelVisible: tareasPendientes > 0,
+                          child: const Icon(Icons.assignment_outlined),
+                        );
+                      },
+                    ),
+                    selectedIcon: Builder(
+                      builder: (context) {
+                        final tareasPendientes = provider.evidencias
+                            .where(
+                              (e) =>
+                                  e.alumnoId == provider.usuario!.id &&
+                                  e.estado == EstadoEvidencia.asignado,
+                            )
+                            .length;
+                        return Badge(
+                          label: Text(tareasPendientes.toString()),
+                          isLabelVisible: tareasPendientes > 0,
+                          child: const Icon(Icons.assignment),
+                        );
+                      },
+                    ),
+                    label: const Text('Tareas'),
                   ),
                 ],
               ),
@@ -582,6 +647,7 @@ class _AlumnoHomeScreenState extends State<AlumnoHomeScreen> {
                           _buildInicioTab(provider),
                           _buildMisClasesTab(provider),
                           _buildCalendarioTab(provider),
+                          const TareasPendientesScreen(),
                         ],
                       ),
                     ),
@@ -610,6 +676,8 @@ class _AlumnoHomeScreenState extends State<AlumnoHomeScreen> {
         return 'Mis clases';
       case 2:
         return 'Calendario';
+      case 3:
+        return 'Tareas pendientes';
       default:
         return 'Mi Progreso';
     }
@@ -663,14 +731,21 @@ class _AlumnoHomeScreenState extends State<AlumnoHomeScreen> {
               e.estado != EstadoEvidencia.asignado,
         )
         .length;
+    final tareasPendientes = provider.evidencias
+        .where(
+          (e) =>
+              e.alumnoId == provider.usuario!.id &&
+              e.estado == EstadoEvidencia.asignado,
+        )
+        .length;
 
     return Wrap(
       spacing: 16,
       runSpacing: 16,
       children: [
         _buildStatCardAlumno(
-          icon: Icons.class_,
-          title: 'Clases',
+          icon: Icons.school,
+          title: 'Materias',
           value: totalClases.toString(),
           color: Colors.blue,
         ),
@@ -679,6 +754,22 @@ class _AlumnoHomeScreenState extends State<AlumnoHomeScreen> {
           title: 'Evidencias',
           value: '$evidenciasEntregadas/$totalEvidencias',
           color: Colors.green,
+        ),
+        GestureDetector(
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (ctx) => const TareasPendientesScreen(),
+              ),
+            );
+          },
+          child: _buildStatCardAlumno(
+            icon: Icons.pending_actions,
+            title: 'Tareas pendientes',
+            value: tareasPendientes.toString(),
+            color: tareasPendientes > 0 ? Colors.orange : Colors.grey,
+          ),
         ),
       ],
     );
@@ -758,7 +849,9 @@ class _AlumnoHomeScreenState extends State<AlumnoHomeScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      materia.nombre,
+                      materia.grupo != null && materia.grupo!.isNotEmpty
+                          ? '${materia.nombre} - Grupo ${materia.grupo}'
+                          : materia.nombre,
                       style: TextStyle(
                         fontSize: isMobile ? 16 : 18,
                         fontWeight: FontWeight.bold,
@@ -911,217 +1004,12 @@ class _AlumnoHomeScreenState extends State<AlumnoHomeScreen> {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 16),
-                  _buildEstadisticasRapidas(provider, materia.id),
                 ],
               ),
             ),
           ),
         );
       },
-    );
-  }
-
-  Widget _buildEstadisticasRapidas(
-    CuadernoProvider provider,
-    String materiaId,
-  ) {
-    // Calcular estadísticas para esta materia
-    double porcentajeAsistencia = provider.calcularPorcentajeAsistencia(
-      provider.usuario!.id,
-      materiaId,
-    );
-    double porcentajeEvidencias = provider.calcularPorcentajeEvidencias(
-      provider.usuario!.id,
-      materiaId,
-    );
-
-    // Verificar si hay datos suficientes
-    final asistencias = provider.asistencias
-        .where(
-          (a) => a.alumnoId == provider.usuario!.id && a.materiaId == materiaId,
-        )
-        .toList();
-    final evidencias = provider.evidencias
-        .where(
-          (e) => e.alumnoId == provider.usuario!.id && e.materiaId == materiaId,
-        )
-        .toList();
-    final tieneDatosSuficientes =
-        asistencias.isNotEmpty || evidencias.isNotEmpty;
-
-    bool tieneRiesgo =
-        tieneDatosSuficientes &&
-        provider.tieneRiesgoReprobacion(provider.usuario!.id, materiaId);
-    bool puedeExentar =
-        tieneDatosSuficientes &&
-        provider.puedeExentar(provider.usuario!.id, materiaId);
-
-    // Calcular porcentaje de evaluaciones aprobadas
-    final calificaciones = provider.calificaciones
-        .where(
-          (c) => c.alumnoId == provider.usuario!.id && c.materiaId == materiaId,
-        )
-        .toList();
-    int evaluacionesAprobadas = 0;
-    int evaluacionesTotales = 0;
-    if (calificaciones.isNotEmpty) {
-      final calif = calificaciones.first;
-      if (calif.examen != null) {
-        evaluacionesTotales++;
-        if (calif.examen! >= 6) evaluacionesAprobadas++;
-      }
-      if (calif.portafolioEvidencias != null) {
-        evaluacionesTotales++;
-        if (calif.portafolioEvidencias! >= 6) evaluacionesAprobadas++;
-      }
-      if (calif.actividadComplementaria != null) {
-        evaluacionesTotales++;
-        if (calif.actividadComplementaria! >= 6) evaluacionesAprobadas++;
-      }
-    }
-    final porcentajeEvaluaciones = evaluacionesTotales == 0
-        ? 100.0
-        : (evaluacionesAprobadas / evaluacionesTotales) * 100;
-
-    return Column(
-      children: [
-        Row(
-          children: [
-            Expanded(
-              child: _buildIndicador(
-                'Asistencia',
-                '${porcentajeAsistencia.toStringAsFixed(1)}%',
-                porcentajeAsistencia >= 80 ? Colors.green : Colors.red,
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: _buildIndicador(
-                'Evidencias',
-                '${porcentajeEvidencias.toStringAsFixed(1)}%',
-                porcentajeEvidencias >= 50 ? Colors.green : Colors.red,
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: _buildIndicador(
-                'Evaluaciones',
-                evaluacionesTotales == 0
-                    ? 'Sin datos'
-                    : '$evaluacionesAprobadas/$evaluacionesTotales',
-                evaluacionesTotales == 0
-                    ? Colors.grey
-                    : (porcentajeEvaluaciones >= 66.7
-                          ? Colors.green
-                          : Colors.red),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 12),
-        if (!tieneDatosSuficientes)
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-            decoration: BoxDecoration(
-              color: Colors.grey[200],
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: const [
-                Icon(Icons.info_outline, size: 16, color: Colors.grey),
-                SizedBox(width: 4),
-                Text(
-                  'Sin datos suficientes',
-                  style: TextStyle(
-                    color: Colors.grey,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 12,
-                  ),
-                ),
-              ],
-            ),
-          )
-        else if (puedeExentar)
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-            decoration: BoxDecoration(
-              color: Colors.green[100],
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: const [
-                Icon(Icons.star, size: 16, color: Colors.green),
-                SizedBox(width: 4),
-                Text(
-                  'Exento',
-                  style: TextStyle(
-                    color: Colors.green,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 12,
-                  ),
-                ),
-              ],
-            ),
-          )
-        else if (tieneRiesgo)
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-            decoration: BoxDecoration(
-              color: Colors.red[100],
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: const [
-                Icon(Icons.warning, size: 16, color: Colors.red),
-                SizedBox(width: 4),
-                Text(
-                  'Riesgo de Reprobación',
-                  style: TextStyle(
-                    color: Colors.red,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 12,
-                  ),
-                ),
-              ],
-            ),
-          ),
-      ],
-    );
-  }
-
-  Widget _buildIndicador(String titulo, String valor, Color color) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: color.withValues(alpha: 0.3)),
-      ),
-      child: Column(
-        children: [
-          Text(
-            titulo,
-            style: TextStyle(
-              fontSize: 12,
-              color: Colors.grey[600],
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            valor,
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: color,
-            ),
-          ),
-        ],
-      ),
     );
   }
 

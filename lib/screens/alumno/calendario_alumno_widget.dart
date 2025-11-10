@@ -81,11 +81,6 @@ class _CalendarioAlumnoWidgetState extends State<CalendarioAlumnoWidget> {
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Row(
         children: [
-          const Text(
-            'Calendario',
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.w500),
-          ),
-          const Spacer(),
           SizedBox(
             width: 240,
             child: DropdownButtonFormField<String?>(

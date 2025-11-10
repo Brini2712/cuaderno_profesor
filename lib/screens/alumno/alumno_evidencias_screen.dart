@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../../models/asistencia.dart';
 import '../../models/evidencia.dart';
 import '../../models/materia.dart';
 import '../../providers/cuaderno_provider.dart';
@@ -34,19 +35,12 @@ class _AlumnoEvidenciasScreenState extends State<AlumnoEvidenciasScreen> {
       return true;
     }).toList();
 
-    // Usar el número REAL de evidencias asignadas, no el esperado teórico
-    final totalEsperadas = misEvidencias.length;
-    final porcentaje = provider.calcularPorcentajeEvidencias(
-      provider.usuario!.id,
-      widget.materia.id,
-    );
-
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          isMobile
-              ? widget.materia.nombre
-              : 'Mis Evidencias - ${widget.materia.nombre}',
+          widget.materia.grupo != null && widget.materia.grupo!.isNotEmpty
+              ? '${widget.materia.nombre} - Grupo ${widget.materia.grupo}'
+              : widget.materia.nombre,
           style: TextStyle(fontSize: isMobile ? 16 : 20),
         ),
         actions: [
@@ -79,53 +73,8 @@ class _AlumnoEvidenciasScreenState extends State<AlumnoEvidenciasScreen> {
       ),
       body: Column(
         children: [
-          Container(
-            padding: EdgeInsets.all(isMobile ? 12 : 16),
-            color: Colors.grey[100],
-            child: Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Progreso de evidencias',
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: isMobile ? 14 : 16,
-                        ),
-                      ),
-                      SizedBox(height: isMobile ? 6 : 8),
-                      TweenAnimationBuilder<double>(
-                        duration: const Duration(milliseconds: 600),
-                        curve: Curves.easeOutCubic,
-                        tween: Tween<double>(begin: 0, end: porcentaje / 100),
-                        builder: (context, value, _) {
-                          return LinearProgressIndicator(
-                            value: value,
-                            backgroundColor: Colors.grey[300],
-                            valueColor: AlwaysStoppedAnimation<Color>(
-                              porcentaje >= 50 ? Colors.green : Colors.orange,
-                            ),
-                          );
-                        },
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        totalEsperadas == 0
-                            ? 'Sin evidencias asignadas aún'
-                            : '${misEvidencias.where((e) => e.estado != EstadoEvidencia.asignado).length} de $totalEsperadas entregadas (${porcentaje.toStringAsFixed(1)}%)',
-                        style: TextStyle(
-                          fontSize: isMobile ? 11 : 12,
-                          color: Colors.grey[700],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
+          // Estadísticas detalladas
+          _buildEstadisticasDetalladas(provider, isMobile),
           Expanded(
             child: evidenciasFiltradas.isEmpty
                 ? Center(
@@ -321,5 +270,184 @@ class _AlumnoEvidenciasScreenState extends State<AlumnoEvidenciasScreen> {
       case EstadoEvidencia.devuelto:
         return 'Devuelto';
     }
+  }
+
+  Widget _buildEstadisticasDetalladas(
+    CuadernoProvider provider,
+    bool isMobile,
+  ) {
+    // Obtener asistencias de esta materia
+    final asistencias = provider.asistencias
+        .where(
+          (a) =>
+              a.alumnoId == provider.usuario!.id &&
+              a.materiaId == widget.materia.id,
+        )
+        .toList();
+
+    final totalClases = asistencias.length;
+    final asistenciasPresente = asistencias
+        .where((a) => a.tipo == TipoAsistencia.asistencia)
+        .length;
+    final porcentajeAsistencia = totalClases > 0
+        ? (asistenciasPresente / totalClases) * 100
+        : 0;
+
+    // Obtener evidencias de esta materia
+    final evidencias = provider.evidencias
+        .where(
+          (e) =>
+              e.alumnoId == provider.usuario!.id &&
+              e.materiaId == widget.materia.id,
+        )
+        .toList();
+
+    final totalEvidencias = evidencias.length;
+    final evidenciasEntregadas = evidencias
+        .where((e) => e.estado != EstadoEvidencia.asignado)
+        .length;
+    final porcentajeEvidencias = totalEvidencias > 0
+        ? (evidenciasEntregadas / totalEvidencias) * 100
+        : 0;
+
+    return Container(
+      width: double.infinity,
+      padding: EdgeInsets.all(isMobile ? 16 : 24),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.blue.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(
+                  Icons.analytics_outlined,
+                  size: isMobile ? 20 : 24,
+                  color: Colors.blue,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Text(
+                'Estadísticas de la asignatura',
+                style: TextStyle(
+                  fontSize: isMobile ? 16 : 18,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.grey[900],
+                ),
+              ),
+            ],
+          ),
+          SizedBox(height: isMobile ? 16 : 20),
+          Wrap(
+            spacing: isMobile ? 8 : 12,
+            runSpacing: isMobile ? 8 : 12,
+            alignment: WrapAlignment.start,
+            children: [
+              _buildStatCompact(
+                'Total de Clases',
+                totalClases.toString(),
+                Icons.class_,
+                Colors.blue,
+                isMobile,
+              ),
+              _buildStatCompact(
+                'Asistencia',
+                asistenciasPresente.toString(),
+                Icons.check_circle,
+                Colors.green,
+                isMobile,
+              ),
+              _buildStatCompact(
+                '% Asistencia',
+                '${porcentajeAsistencia.toStringAsFixed(1)}%',
+                Icons.percent,
+                porcentajeAsistencia >= 80 ? Colors.green : Colors.red,
+                isMobile,
+              ),
+              _buildStatCompact(
+                'Total de Evidencias',
+                totalEvidencias.toString(),
+                Icons.assignment,
+                Colors.purple,
+                isMobile,
+              ),
+              _buildStatCompact(
+                'Evidencias Entregadas',
+                evidenciasEntregadas.toString(),
+                Icons.assignment_turned_in,
+                Colors.orange,
+                isMobile,
+              ),
+              _buildStatCompact(
+                '% Evidencias Entregadas',
+                '${porcentajeEvidencias.toStringAsFixed(1)}%',
+                Icons.trending_up,
+                porcentajeEvidencias >= 50 ? Colors.green : Colors.red,
+                isMobile,
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStatCompact(
+    String label,
+    String value,
+    IconData icon,
+    Color color,
+    bool isMobile,
+  ) {
+    return Container(
+      width: isMobile ? (MediaQuery.of(context).size.width - 64) / 3 : 140,
+      padding: EdgeInsets.all(isMobile ? 12 : 16),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.withOpacity(0.3)),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, color: color, size: isMobile ? 24 : 32),
+          SizedBox(height: isMobile ? 8 : 12),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: isMobile ? 20 : 28,
+              fontWeight: FontWeight.bold,
+              color: color,
+            ),
+          ),
+          SizedBox(height: isMobile ? 4 : 6),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: isMobile ? 11 : 13,
+              color: Colors.grey[700],
+              fontWeight: FontWeight.w500,
+            ),
+            textAlign: TextAlign.center,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ],
+      ),
+    );
   }
 }

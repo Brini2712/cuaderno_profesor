@@ -30,7 +30,11 @@ class MateriaSearchDelegate extends SearchDelegate<Materia?> {
       children: resultados
           .map(
             (m) => ListTile(
-              title: Text(m.nombre),
+              title: Text(
+                m.grupo != null && m.grupo!.isNotEmpty
+                    ? '${m.nombre} - Grupo ${m.grupo}'
+                    : m.nombre,
+              ),
               subtitle: Text(m.descripcion),
               onTap: () {
                 query = m.nombre;
@@ -53,7 +57,11 @@ class MateriaSearchDelegate extends SearchDelegate<Materia?> {
       itemBuilder: (ctx, i) {
         final m = resultados[i];
         return ListTile(
-          title: Text(m.nombre),
+          title: Text(
+            m.grupo != null && m.grupo!.isNotEmpty
+                ? '${m.nombre} - Grupo ${m.grupo}'
+                : m.nombre,
+          ),
           subtitle: Text(m.descripcion),
           trailing: Text(m.codigoAcceso ?? ''),
           onTap: () {

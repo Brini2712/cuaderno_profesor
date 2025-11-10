@@ -190,25 +190,142 @@ class _EstadisticasTab extends StatelessWidget {
     }
     double acumAsistencia = 0;
     double acumEvidencias = 0;
-    int riesgo = 0;
-    int exento = 0;
     for (final a in alumnos) {
       final pa = provider.calcularPorcentajeAsistencia(a.id, materia.id);
       final pe = provider.calcularPorcentajeEvidencias(a.id, materia.id);
       acumAsistencia += pa;
       acumEvidencias += pe;
-      if (provider.tieneRiesgoReprobacion(a.id, materia.id)) riesgo++;
-      if (provider.puedeExentar(a.id, materia.id)) exento++;
     }
     final promA = acumAsistencia / alumnos.length;
     final promE = acumEvidencias / alumnos.length;
+
+    // Obtener listas de alumnos con riesgo y exento
+    final alumnosConRiesgo = alumnos
+        .where((a) => provider.tieneRiesgoReprobacion(a.id, materia.id))
+        .toList();
+    final alumnosExentos = alumnos
+        .where((a) => provider.puedeExentar(a.id, materia.id))
+        .toList();
+
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
         _stat('Promedio asistencia', '${promA.toStringAsFixed(1)}%'),
         _stat('Promedio evidencias', '${promE.toStringAsFixed(1)}%'),
-        _stat('Alumnos con riesgo', '$riesgo'),
-        _stat('Alumnos exentables', '$exento'),
+        const SizedBox(height: 8),
+
+        // Alumnos con riesgo de reprobación
+        if (alumnosConRiesgo.isNotEmpty)
+          Card(
+            margin: const EdgeInsets.symmetric(vertical: 8),
+            elevation: 2,
+            child: ExpansionTile(
+              backgroundColor: Colors.red.shade50,
+              collapsedBackgroundColor: Colors.red.shade50,
+              leading: const Icon(Icons.warning, color: Colors.red),
+              title: const Text(
+                'Alumnos con riesgo de reprobación',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+              subtitle: Text(
+                'Toca para ver ${alumnosConRiesgo.length} alumno${alumnosConRiesgo.length != 1 ? 's' : ''}',
+                style: TextStyle(color: Colors.red.shade700, fontSize: 12),
+              ),
+              children: [
+                Container(
+                  color: Colors.white,
+                  child: Column(
+                    children: alumnosConRiesgo.map((alumno) {
+                      final asistencia = provider.calcularPorcentajeAsistencia(
+                        alumno.id,
+                        materia.id,
+                      );
+                      final evidencias = provider.calcularPorcentajeEvidencias(
+                        alumno.id,
+                        materia.id,
+                      );
+                      return ListTile(
+                        leading: CircleAvatar(
+                          backgroundColor: Colors.red.shade200,
+                          child: Text(
+                            alumno.nombreCompleto.substring(0, 1).toUpperCase(),
+                          ),
+                        ),
+                        title: Text(alumno.nombreCompleto),
+                        subtitle: Text(
+                          'Asistencia: ${asistencia.toStringAsFixed(1)}% • '
+                          'Evidencias: ${evidencias.toStringAsFixed(1)}%',
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+        // Alumnos que pueden exentar
+        if (alumnosExentos.isNotEmpty)
+          Card(
+            margin: const EdgeInsets.symmetric(vertical: 8),
+            elevation: 2,
+            child: ExpansionTile(
+              backgroundColor: Colors.green.shade50,
+              collapsedBackgroundColor: Colors.green.shade50,
+              leading: const Icon(Icons.star, color: Colors.green),
+              title: const Text(
+                'Alumnos que pueden exentar',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+              subtitle: Text(
+                'Toca para ver ${alumnosExentos.length} alumno${alumnosExentos.length != 1 ? 's' : ''}',
+                style: TextStyle(color: Colors.green.shade700, fontSize: 12),
+              ),
+              children: [
+                Container(
+                  color: Colors.white,
+                  child: Column(
+                    children: alumnosExentos.map((alumno) {
+                      final asistencia = provider.calcularPorcentajeAsistencia(
+                        alumno.id,
+                        materia.id,
+                      );
+                      final evidencias = provider.calcularPorcentajeEvidencias(
+                        alumno.id,
+                        materia.id,
+                      );
+                      return ListTile(
+                        leading: CircleAvatar(
+                          backgroundColor: Colors.green.shade200,
+                          child: Text(
+                            alumno.nombreCompleto.substring(0, 1).toUpperCase(),
+                          ),
+                        ),
+                        title: Text(alumno.nombreCompleto),
+                        subtitle: Text(
+                          'Asistencia: ${asistencia.toStringAsFixed(1)}% • '
+                          'Evidencias: ${evidencias.toStringAsFixed(1)}%',
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+        if (alumnosConRiesgo.isEmpty && alumnosExentos.isEmpty)
+          const Card(
+            child: Padding(
+              padding: EdgeInsets.all(16),
+              child: Center(
+                child: Text(
+                  'No hay alumnos con riesgo ni candidatos a exentar',
+                  style: TextStyle(color: Colors.grey),
+                ),
+              ),
+            ),
+          ),
       ],
     );
   }
