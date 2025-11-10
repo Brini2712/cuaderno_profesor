@@ -15,7 +15,9 @@ import 'package:go_router/go_router.dart';
 import 'package:flutter/services.dart';
 
 class ProfesorHomeScreen extends StatefulWidget {
-  const ProfesorHomeScreen({super.key});
+  final String? initialTab;
+
+  const ProfesorHomeScreen({super.key, this.initialTab});
 
   @override
   State<ProfesorHomeScreen> createState() => _ProfesorHomeScreenState();
@@ -24,9 +26,35 @@ class ProfesorHomeScreen extends StatefulWidget {
 class _ProfesorHomeScreenState extends State<ProfesorHomeScreen> {
   int _selectedIndex = 0;
 
+  // Mapeo de nombres de tab a índices
+  static const Map<String, int> _tabIndices = {
+    'inicio': 0,
+    'materias': 1,
+    'evidencias': 2,
+    'reportes': 3,
+    'perfil': 4,
+    'configuracion': 5,
+  };
+
+  // Mapeo inverso de índices a nombres de tab
+  static const List<String> _tabNames = [
+    'inicio',
+    'materias',
+    'evidencias',
+    'reportes',
+    'perfil',
+    'configuracion',
+  ];
+
   @override
   void initState() {
     super.initState();
+
+    // Establecer el índice inicial basado en el parámetro
+    if (widget.initialTab != null) {
+      _selectedIndex = _tabIndices[widget.initialTab] ?? 0;
+    }
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final provider = Provider.of<CuadernoProvider>(context, listen: false);
       if (provider.usuario == null) {
@@ -64,6 +92,8 @@ class _ProfesorHomeScreenState extends State<ProfesorHomeScreen> {
                   setState(() {
                     _selectedIndex = index;
                   });
+                  // Actualizar la URL cuando cambias de tab
+                  context.go('/profesor/${_tabNames[index]}');
                 },
                 labelType: NavigationRailLabelType.all,
                 leading: Column(
@@ -530,82 +560,96 @@ class _ProfesorHomeScreenState extends State<ProfesorHomeScreen> {
 
   Widget _buildAsistenciasTab(CuadernoProvider provider) {
     if (provider.materias.isEmpty) {
-      return _buildEmptyState(
-        icon: Icons.how_to_reg,
-        title: 'Sin materias para tomar asistencia',
-        subtitle: 'Crea una materia y agrega alumnos para comenzar',
-        actionText: 'Crear Materia',
-        onAction: () => _mostrarCrearMateria(provider),
+      return RefreshIndicator(
+        onRefresh: () => provider.cargarDatos(),
+        child: _buildEmptyState(
+          icon: Icons.how_to_reg,
+          title: 'Sin materias para tomar asistencia',
+          subtitle: 'Crea una materia y agrega alumnos para comenzar',
+          actionText: 'Crear Materia',
+          onAction: () => _mostrarCrearMateria(provider),
+        ),
       );
     }
 
-    return ListView.builder(
-      padding: const EdgeInsets.all(16),
-      itemCount: provider.materias.length,
-      itemBuilder: (context, index) {
-        final m = provider.materias[index];
-        return Card(
-          margin: const EdgeInsets.only(bottom: 16),
-          child: ListTile(
-            leading: Container(
-              width: 6,
-              height: double.infinity,
-              color: Color(int.parse(m.color.replaceAll('#', '0xFF'))),
+    return RefreshIndicator(
+      onRefresh: () => provider.cargarDatos(),
+      child: ListView.builder(
+        padding: const EdgeInsets.all(16),
+        itemCount: provider.materias.length,
+        itemBuilder: (context, index) {
+          final m = provider.materias[index];
+          return Card(
+            margin: const EdgeInsets.only(bottom: 16),
+            child: ListTile(
+              leading: Container(
+                width: 6,
+                height: double.infinity,
+                color: Color(int.parse(m.color.replaceAll('#', '0xFF'))),
+              ),
+              title: Text(
+                m.nombre,
+                style: const TextStyle(fontWeight: FontWeight.bold),
+              ),
+              subtitle: Text(m.descripcion),
+              trailing: ElevatedButton.icon(
+                icon: const Icon(Icons.fact_check),
+                label: const Text('Tomar asistencia'),
+                onPressed: () => _abrirTomarAsistencia(m),
+              ),
             ),
-            title: Text(
-              m.nombre,
-              style: const TextStyle(fontWeight: FontWeight.bold),
-            ),
-            subtitle: Text(m.descripcion),
-            trailing: ElevatedButton.icon(
-              icon: const Icon(Icons.fact_check),
-              label: const Text('Tomar asistencia'),
-              onPressed: () => _abrirTomarAsistencia(m),
-            ),
-          ),
-        );
-      },
+          );
+        },
+      ),
     );
   }
 
   Widget _buildEvidenciasTab(CuadernoProvider provider) {
     if (provider.materias.isEmpty) {
-      return _buildEmptyState(
-        icon: Icons.assignment,
-        title: 'Sin materias para gestionar evidencias',
-        subtitle: 'Crea una materia primero',
-        actionText: 'Crear Materia',
-        onAction: () => _mostrarCrearMateria(provider),
+      return RefreshIndicator(
+        onRefresh: () => provider.cargarDatos(),
+        child: _buildEmptyState(
+          icon: Icons.assignment,
+          title: 'Sin materias para gestionar evidencias',
+          subtitle: 'Crea una materia primero',
+          actionText: 'Crear Materia',
+          onAction: () => _mostrarCrearMateria(provider),
+        ),
       );
     }
 
-    return ListView.builder(
-      padding: const EdgeInsets.all(16),
-      itemCount: provider.materias.length,
-      itemBuilder: (context, index) {
-        final m = provider.materias[index];
-        final numEvidencias = provider.contarEvidenciasUnicas(materiaId: m.id);
-        return Card(
-          margin: const EdgeInsets.only(bottom: 16),
-          child: ListTile(
-            leading: Container(
-              width: 6,
-              height: double.infinity,
-              color: Color(int.parse(m.color.replaceAll('#', '0xFF'))),
+    return RefreshIndicator(
+      onRefresh: () => provider.cargarDatos(),
+      child: ListView.builder(
+        padding: const EdgeInsets.all(16),
+        itemCount: provider.materias.length,
+        itemBuilder: (context, index) {
+          final m = provider.materias[index];
+          final numEvidencias = provider.contarEvidenciasUnicas(
+            materiaId: m.id,
+          );
+          return Card(
+            margin: const EdgeInsets.only(bottom: 16),
+            child: ListTile(
+              leading: Container(
+                width: 6,
+                height: double.infinity,
+                color: Color(int.parse(m.color.replaceAll('#', '0xFF'))),
+              ),
+              title: Text(
+                m.nombre,
+                style: const TextStyle(fontWeight: FontWeight.bold),
+              ),
+              subtitle: Text('$numEvidencias evidencias registradas'),
+              trailing: ElevatedButton.icon(
+                icon: const Icon(Icons.assignment),
+                label: const Text('Gestionar'),
+                onPressed: () => _abrirGestionEvidencias(m),
+              ),
             ),
-            title: Text(
-              m.nombre,
-              style: const TextStyle(fontWeight: FontWeight.bold),
-            ),
-            subtitle: Text('$numEvidencias evidencias registradas'),
-            trailing: ElevatedButton.icon(
-              icon: const Icon(Icons.assignment),
-              label: const Text('Gestionar'),
-              onPressed: () => _abrirGestionEvidencias(m),
-            ),
-          ),
-        );
-      },
+          );
+        },
+      ),
     );
   }
 
@@ -656,39 +700,48 @@ class _ProfesorHomeScreenState extends State<ProfesorHomeScreen> {
     String? actionText,
     VoidCallback? onAction,
   }) {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Container(
-            padding: const EdgeInsets.all(24),
-            decoration: BoxDecoration(
-              color: Colors.grey[100],
-              shape: BoxShape.circle,
+    // Envolver en ListView para que RefreshIndicator funcione
+    return ListView(
+      padding: const EdgeInsets.all(24),
+      children: [
+        SizedBox(
+          height: MediaQuery.of(context).size.height - 200,
+          child: Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(24),
+                  decoration: BoxDecoration(
+                    color: Colors.grey[100],
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(icon, size: 64, color: Colors.grey[400]),
+                ),
+                const SizedBox(height: 24),
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.grey,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  subtitle,
+                  style: const TextStyle(fontSize: 16, color: Colors.grey),
+                  textAlign: TextAlign.center,
+                ),
+                if (actionText != null && onAction != null) ...[
+                  const SizedBox(height: 24),
+                  ElevatedButton(onPressed: onAction, child: Text(actionText)),
+                ],
+              ],
             ),
-            child: Icon(icon, size: 64, color: Colors.grey[400]),
           ),
-          const SizedBox(height: 24),
-          Text(
-            title,
-            style: const TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-              color: Colors.grey,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            subtitle,
-            style: const TextStyle(fontSize: 16, color: Colors.grey),
-            textAlign: TextAlign.center,
-          ),
-          if (actionText != null && onAction != null) ...[
-            const SizedBox(height: 24),
-            ElevatedButton(onPressed: onAction, child: Text(actionText)),
-          ],
-        ],
-      ),
+        ),
+      ],
     );
   }
 

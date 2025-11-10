@@ -677,42 +677,51 @@ class _AlumnoHomeScreenState extends State<AlumnoHomeScreen> {
   }
 
   Widget _buildEmptyState(CuadernoProvider provider) {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Container(
-            padding: const EdgeInsets.all(24),
-            decoration: BoxDecoration(
-              color: Colors.grey[100],
-              shape: BoxShape.circle,
+    // Envolver en ListView para que RefreshIndicator funcione
+    return ListView(
+      padding: const EdgeInsets.all(24),
+      children: [
+        SizedBox(
+          height: MediaQuery.of(context).size.height - 200,
+          child: Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(24),
+                  decoration: BoxDecoration(
+                    color: Colors.grey[100],
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(Icons.school, size: 64, color: Colors.grey[400]),
+                ),
+                const SizedBox(height: 24),
+                Text(
+                  'No estás inscrito en ninguna clase',
+                  style: const TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.grey,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Únete a una clase usando el código proporcionado por tu profesor',
+                  style: const TextStyle(fontSize: 16, color: Colors.grey),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 24),
+                ElevatedButton.icon(
+                  onPressed: () => _mostrarUnirseAClase(provider),
+                  icon: const Icon(Icons.add),
+                  label: const Text('Unirse a Clase'),
+                ),
+              ],
             ),
-            child: Icon(Icons.school, size: 64, color: Colors.grey[400]),
           ),
-          const SizedBox(height: 24),
-          Text(
-            'No estás inscrito en ninguna clase',
-            style: const TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-              color: Colors.grey,
-            ),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Únete a una clase usando el código proporcionado por tu profesor',
-            style: const TextStyle(fontSize: 16, color: Colors.grey),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 24),
-          ElevatedButton.icon(
-            onPressed: () => _mostrarUnirseAClase(provider),
-            icon: const Icon(Icons.add),
-            label: const Text('Unirse a Clase'),
-          ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 

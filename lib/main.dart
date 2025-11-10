@@ -32,23 +32,31 @@ class CuadernoProfesorApp extends StatelessWidget {
       ],
       child: Builder(
         builder: (context) {
-          final provider = context.watch<CuadernoProvider>();
+          // Evitamos reconstruir el router en cada notifyListeners
+          final provider = context.read<CuadernoProvider>();
           final router = GoRouter(
-            initialLocation: '/login',
+            // NO establecemos initialLocation para que respete la URL del navegador
             refreshListenable: provider,
             redirect: (context, state) {
               // Mientras se carga el usuario inicial, no redirigimos
               if (provider.cargandoUsuarioInicial) return null;
+
               final usuario = provider.usuario;
-              final loggingIn = state.matchedLocation == '/login';
+              final currentLocation = state.matchedLocation;
+
+              // Si no hay usuario autenticado, redirigir a login (excepto si ya está en login)
               if (usuario == null) {
-                return loggingIn ? null : '/login';
+                return currentLocation == '/login' ? null : '/login';
               }
-              if (loggingIn) {
+
+              // Si hay usuario autenticado Y está en login o raíz, redirigir a su home
+              if (currentLocation == '/login' || currentLocation == '/') {
                 return usuario.tipo == TipoUsuario.profesor
-                    ? '/profesor'
+                    ? '/profesor/inicio'
                     : '/alumno';
               }
+
+              // Para cualquier otra ruta, respetar la ubicación actual
               return null;
             },
             routes: [
@@ -58,7 +66,14 @@ class CuadernoProfesorApp extends StatelessWidget {
               ),
               GoRoute(
                 path: '/profesor',
-                builder: (context, state) => const ProfesorHomeScreen(),
+                redirect: (context, state) => '/profesor/inicio',
+              ),
+              GoRoute(
+                path: '/profesor/:tab',
+                builder: (context, state) {
+                  final tab = state.pathParameters['tab'] ?? 'inicio';
+                  return ProfesorHomeScreen(initialTab: tab);
+                },
               ),
               GoRoute(
                 path: '/alumno',

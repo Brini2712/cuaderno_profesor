@@ -1234,15 +1234,17 @@ class CuadernoProvider extends ChangeNotifier {
           )
           .toList();
 
+      // CORREGIDO: Usar fechaRegistro en lugar de fechaEntrega para el rango
+      // fechaEntrega es la fecha límite, fechaRegistro es cuando se asignó
       final evidenciasRango = _evidencias
           .where(
             (e) =>
                 e.alumnoId == alumno.id &&
                 e.materiaId == materiaId &&
-                e.fechaEntrega.isAfter(
+                e.fechaRegistro.isAfter(
                   fechaInicio.subtract(const Duration(days: 1)),
                 ) &&
-                e.fechaEntrega.isBefore(fechaFin.add(const Duration(days: 1))),
+                e.fechaRegistro.isBefore(fechaFin.add(const Duration(days: 1))),
           )
           .toList();
 
@@ -1250,6 +1252,7 @@ class CuadernoProvider extends ChangeNotifier {
           ? 0.0
           : AnalyticsUtils.porcentajeAsistencia(asistenciasRango);
 
+      // Contar evidencias entregadas (cualquier estado diferente a "asignado")
       final entregadas = evidenciasRango
           .where((e) => e.estado != EstadoEvidencia.asignado)
           .length;

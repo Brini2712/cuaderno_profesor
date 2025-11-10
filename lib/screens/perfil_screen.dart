@@ -253,7 +253,7 @@ class _PerfilScreenState extends State<PerfilScreen> {
         0,
         (sum, materia) => sum + materia.alumnosIds.length,
       );
-      final totalEvidencias = provider.evidencias.length;
+      final totalEvidencias = provider.contarEvidenciasUnicas();
 
       return Card(
         child: Padding(
