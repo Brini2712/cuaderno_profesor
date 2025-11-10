@@ -472,8 +472,64 @@ class CuadernoProvider extends ChangeNotifier {
 
       final materia = Materia.fromMap(data);
 
+      // Obtener todas las evidencias existentes de esta materia
+      // (las que fueron creadas para otros alumnos)
+      final evidenciasSnapshot = await _firestore
+          .collection('evidencias')
+          .where('materiaId', isEqualTo: materia.id)
+          .where('profesorId', isEqualTo: materia.profesorId)
+          .get();
+
+      // Crear copias de las evidencias para el nuevo alumno
+      final batch = _firestore.batch();
+      final evidenciasCreadas = <String>{}; // Para evitar duplicados
+
+      for (final evidenciaDoc in evidenciasSnapshot.docs) {
+        final evidenciaData = evidenciaDoc.data();
+        final tituloEvidencia = evidenciaData['titulo'] as String;
+
+        // Solo crear una copia si no existe ya para este alumno con este título
+        if (!evidenciasCreadas.contains(tituloEvidencia)) {
+          final nuevaEvidenciaId = _uuid.v4();
+          final evidenciaOriginal = Evidencia.fromMap(evidenciaData);
+
+          // Crear nueva evidencia para el nuevo alumno
+          final nuevaEvidencia = evidenciaOriginal.copyWith(
+            id: nuevaEvidenciaId,
+            alumnoId: _usuario!.id,
+            estado: EstadoEvidencia.asignado,
+            calificacionNumerica: null,
+            fechaEntregaAlumno: null,
+            comentarioAlumno: null,
+            archivosAdjuntos: [],
+            enlaceExterno: null,
+            comentarioProfesor: null,
+            fechaCalificacion: null,
+          );
+
+          batch.set(
+            _firestore.collection('evidencias').doc(nuevaEvidenciaId),
+            nuevaEvidencia.toMap(),
+          );
+
+          evidenciasCreadas.add(tituloEvidencia);
+
+          // Crear notificación para cada evidencia
+          _agregarNotificacionABatch(
+            batch,
+            usuarioId: _usuario!.id,
+            titulo: 'Nueva evidencia: $tituloEvidencia',
+            mensaje: 'Se asignó una nueva evidencia en ${materia.nombre}',
+            tipo: 'evidencia',
+            materiaId: materia.id,
+            evidenciaId: nuevaEvidenciaId,
+          );
+        }
+      }
+
       // Notificar al alumno que se unió exitosamente
-      await _crearNotificacion(
+      _agregarNotificacionABatch(
+        batch,
         usuarioId: _usuario!.id,
         titulo: '¡Bienvenido a ${materia.nombre}!',
         mensaje: 'Te has unido exitosamente a la materia',
@@ -483,7 +539,8 @@ class CuadernoProvider extends ChangeNotifier {
 
       // Notificar al profesor sobre el nuevo alumno
       if (materia.profesorId.isNotEmpty) {
-        await _crearNotificacion(
+        _agregarNotificacionABatch(
+          batch,
           usuarioId: materia.profesorId,
           titulo: 'Nuevo alumno en ${materia.nombre}',
           mensaje: '${_usuario!.nombreCompleto} se ha unido a la clase',
@@ -491,6 +548,9 @@ class CuadernoProvider extends ChangeNotifier {
           materiaId: materia.id,
         );
       }
+
+      // Ejecutar todas las operaciones en batch
+      await batch.commit();
 
       // Recargar materias del alumno
       await cargarMateriasAlumno();
@@ -1446,5 +1506,20 @@ class CuadernoProvider extends ChangeNotifier {
       if (byTitulo != 0) return byTitulo;
       return a.fechaEntrega.compareTo(b.fechaEntrega);
     });
+  }
+
+  // ================= CONTADORES =================
+  /// Cuenta evidencias "únicas" creadas por el profesor.
+  /// Como el modelo guarda una evidencia por alumno, aquí agrupamos por
+  /// (materiaId | titulo normalizado | fechaRegistro) para evitar duplicados.
+  int contarEvidenciasUnicas({String? materiaId}) {
+    final keys = <String>{};
+    for (final e in _evidencias) {
+      if (materiaId != null && e.materiaId != materiaId) continue;
+      final key =
+          '${e.materiaId}|${_normalize(e.titulo)}|${e.fechaRegistro.millisecondsSinceEpoch}';
+      keys.add(key);
+    }
+    return keys.length;
   }
 }

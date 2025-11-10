@@ -369,8 +369,8 @@ class _ProfesorHomeScreenState extends State<ProfesorHomeScreen> {
               _buildStatCard(
                 icon: Icons.assignment,
                 title: 'Evidencias',
-                value: provider.evidencias.length.toString(),
-                subtitle: 'Total asignadas',
+                value: provider.contarEvidenciasUnicas().toString(),
+                subtitle: 'Conjuntos únicos',
                 color: Colors.orange,
                 onTap: () => setState(() => _selectedIndex = 3),
               ),
@@ -584,9 +584,7 @@ class _ProfesorHomeScreenState extends State<ProfesorHomeScreen> {
       itemCount: provider.materias.length,
       itemBuilder: (context, index) {
         final m = provider.materias[index];
-        final numEvidencias = provider.evidencias
-            .where((e) => e.materiaId == m.id)
-            .length;
+        final numEvidencias = provider.contarEvidenciasUnicas(materiaId: m.id);
         return Card(
           margin: const EdgeInsets.only(bottom: 16),
           child: ListTile(
