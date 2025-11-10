@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/cuaderno_provider.dart';
 import '../providers/notificaciones_provider.dart';
+import '../providers/theme_provider.dart';
 import 'package:go_router/go_router.dart';
 import '../models/materia.dart';
 import '../models/evidencia.dart';
@@ -620,15 +621,20 @@ class _AlumnoHomeScreenState extends State<AlumnoHomeScreen> {
           padding: EdgeInsets.all(isMobile ? 12 : 16),
           child: Row(
             children: [
-              Container(
-                width: 4,
-                height: isMobile ? 40 : 50,
-                decoration: BoxDecoration(
-                  color: Color(
+              Consumer<ThemeProvider>(
+                builder: (context, themeProvider, _) {
+                  final baseColor = Color(
                     int.parse(materia.color.replaceAll('#', '0xFF')),
-                  ),
-                  borderRadius: BorderRadius.circular(2),
-                ),
+                  );
+                  return Container(
+                    width: 4,
+                    height: isMobile ? 40 : 50,
+                    decoration: BoxDecoration(
+                      color: themeProvider.ajustarColorParaDarkMode(baseColor),
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  );
+                },
               ),
               SizedBox(width: isMobile ? 12 : 16),
               Expanded(
@@ -743,15 +749,22 @@ class _AlumnoHomeScreenState extends State<AlumnoHomeScreen> {
                 children: [
                   Row(
                     children: [
-                      Container(
-                        width: 4,
-                        height: 40,
-                        decoration: BoxDecoration(
-                          color: Color(
+                      Consumer<ThemeProvider>(
+                        builder: (context, themeProvider, _) {
+                          final baseColor = Color(
                             int.parse(materia.color.replaceAll('#', '0xFF')),
-                          ),
-                          borderRadius: BorderRadius.circular(2),
-                        ),
+                          );
+                          return Container(
+                            width: 4,
+                            height: 40,
+                            decoration: BoxDecoration(
+                              color: themeProvider.ajustarColorParaDarkMode(
+                                baseColor,
+                              ),
+                              borderRadius: BorderRadius.circular(2),
+                            ),
+                          );
+                        },
                       ),
                       const SizedBox(width: 12),
                       Expanded(

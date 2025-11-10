@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 import '../providers/cuaderno_provider.dart';
+import '../providers/theme_provider.dart';
 
 class ConfiguracionScreen extends StatefulWidget {
   const ConfiguracionScreen({super.key});
@@ -12,7 +13,6 @@ class ConfiguracionScreen extends StatefulWidget {
 
 class _ConfiguracionScreenState extends State<ConfiguracionScreen> {
   bool _notificacionesActivas = true;
-  bool _modoOscuro = false;
   bool _recordatoriosEvidencias = true;
   bool _recordatoriosAsistencia = true;
 
@@ -64,20 +64,28 @@ class _ConfiguracionScreenState extends State<ConfiguracionScreen> {
 
               // Sección de Apariencia
               _buildSeccionHeader('Apariencia'),
-              SwitchListTile(
-                title: const Text('Modo oscuro'),
-                subtitle: const Text('Usar tema oscuro en la aplicación'),
-                value: _modoOscuro,
-                onChanged: (value) {
-                  setState(() => _modoOscuro = value);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Función próximamente'),
-                      duration: Duration(seconds: 2),
-                    ),
+              Consumer<ThemeProvider>(
+                builder: (context, themeProvider, _) {
+                  return SwitchListTile(
+                    title: const Text('Modo oscuro'),
+                    subtitle: const Text('Usar tema oscuro en la aplicación'),
+                    value: themeProvider.modoOscuro,
+                    onChanged: (value) {
+                      themeProvider.toggleModoOscuro();
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(
+                            value
+                                ? '🌙 Modo oscuro activado'
+                                : '☀️ Modo claro activado',
+                          ),
+                          duration: const Duration(seconds: 2),
+                        ),
+                      );
+                    },
+                    secondary: const Icon(Icons.dark_mode),
                   );
                 },
-                secondary: const Icon(Icons.dark_mode),
               ),
               const Divider(),
 

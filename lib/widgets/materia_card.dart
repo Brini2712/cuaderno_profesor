@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../models/materia.dart';
+import '../providers/theme_provider.dart';
 
 class MateriaCard extends StatelessWidget {
   final Materia materia;
@@ -28,15 +30,20 @@ class MateriaCard extends StatelessWidget {
           padding: const EdgeInsets.all(16),
           child: Row(
             children: [
-              Container(
-                width: 4,
-                height: 60,
-                decoration: BoxDecoration(
-                  color: Color(
+              Consumer<ThemeProvider>(
+                builder: (context, themeProvider, _) {
+                  final baseColor = Color(
                     int.parse(materia.color.replaceAll('#', '0xFF')),
-                  ),
-                  borderRadius: BorderRadius.circular(2),
-                ),
+                  );
+                  return Container(
+                    width: 4,
+                    height: 60,
+                    decoration: BoxDecoration(
+                      color: themeProvider.ajustarColorParaDarkMode(baseColor),
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  );
+                },
               ),
               const SizedBox(width: 16),
               Expanded(
