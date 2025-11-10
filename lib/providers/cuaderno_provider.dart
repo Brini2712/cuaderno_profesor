@@ -469,6 +469,17 @@ class CuadernoProvider extends ChangeNotifier {
       await doc.reference.update({
         'alumnosIds': FieldValue.arrayUnion([_usuario!.id]),
       });
+
+      // Notificar al alumno que se unió exitosamente
+      final materia = Materia.fromMap(data);
+      await _crearNotificacion(
+        usuarioId: _usuario!.id,
+        titulo: '¡Bienvenido a ${materia.nombre}!',
+        mensaje: 'Te has unido exitosamente a la materia',
+        tipo: 'general',
+        materiaId: materia.id,
+      );
+
       // Recargar materias del alumno
       await cargarMateriasAlumno();
       notifyListeners();
@@ -614,11 +625,49 @@ class CuadernoProvider extends ChangeNotifier {
       }
 
       final nuevosLoc = <RegistroAsistencia>[];
+      final materia = _materias.firstWhere(
+        (m) => m.id == materiaId,
+        orElse: () => Materia(
+          id: materiaId,
+          nombre: 'Materia',
+          descripcion: '',
+          color: '#2196F3',
+          profesorId: '',
+          fechaCreacion: DateTime.now(),
+        ),
+      );
+
       for (final reg in registros) {
         final id = _uuid.v4();
         final nuevo = reg.copyWith(id: id);
         batch.set(_firestore.collection('asistencias').doc(id), nuevo.toMap());
         nuevosLoc.add(nuevo);
+
+        // Notificar al alumno sobre su asistencia
+        String estadoTexto;
+        switch (reg.tipo) {
+          case TipoAsistencia.asistencia:
+            estadoTexto = 'Asistencia';
+            break;
+          case TipoAsistencia.justificacion:
+            estadoTexto = 'Falta justificada';
+            break;
+          case TipoAsistencia.retardo:
+            estadoTexto = 'Retardo';
+            break;
+          case TipoAsistencia.falta:
+            estadoTexto = 'Falta';
+            break;
+        }
+
+        _agregarNotificacionABatch(
+          batch,
+          usuarioId: reg.alumnoId,
+          titulo: '$estadoTexto registrada',
+          mensaje: 'Se registró tu asistencia en ${materia.nombre}',
+          tipo: 'asistencia',
+          materiaId: materiaId,
+        );
       }
 
       await batch.commit();
@@ -639,6 +688,60 @@ class CuadernoProvider extends ChangeNotifier {
     } catch (e) {
       _lastError = 'Error guardando asistencias';
     }
+  }
+
+  // ============= NOTIFICACIONES =============
+  /// Método helper para crear notificaciones
+  Future<void> _crearNotificacion({
+    required String usuarioId,
+    required String titulo,
+    required String mensaje,
+    required String tipo,
+    String? materiaId,
+    String? evidenciaId,
+  }) async {
+    try {
+      debugPrint('📝 Creando notificación:');
+      debugPrint('   Para usuario: $usuarioId');
+      debugPrint('   Título: $titulo');
+      final notifId = _uuid.v4();
+      await _firestore.collection('notificaciones').doc(notifId).set({
+        'usuarioId': usuarioId,
+        'titulo': titulo,
+        'mensaje': mensaje,
+        'tipo': tipo,
+        'fecha': FieldValue.serverTimestamp(),
+        'leida': false,
+        if (materiaId != null) 'materiaId': materiaId,
+        if (evidenciaId != null) 'evidenciaId': evidenciaId,
+      });
+      debugPrint('✅ Notificación guardada en Firestore con ID: $notifId');
+    } catch (e) {
+      debugPrint('❌ Error creando notificación: $e');
+    }
+  }
+
+  /// Crear notificaciones en batch
+  void _agregarNotificacionABatch(
+    WriteBatch batch, {
+    required String usuarioId,
+    required String titulo,
+    required String mensaje,
+    required String tipo,
+    String? materiaId,
+    String? evidenciaId,
+  }) {
+    final notifId = _uuid.v4();
+    batch.set(_firestore.collection('notificaciones').doc(notifId), {
+      'usuarioId': usuarioId,
+      'titulo': titulo,
+      'mensaje': mensaje,
+      'tipo': tipo,
+      'fecha': FieldValue.serverTimestamp(),
+      'leida': false,
+      if (materiaId != null) 'materiaId': materiaId,
+      if (evidenciaId != null) 'evidenciaId': evidenciaId,
+    });
   }
 
   // Gestión de evidencias
@@ -690,18 +793,16 @@ class CuadernoProvider extends ChangeNotifier {
         );
         nuevasEvidencias.add(nuevaEvidencia);
 
-        // Crear notificación para el alumno en el mismo batch
-        final notifId = _uuid.v4();
-        batch.set(_firestore.collection('notificaciones').doc(notifId), {
-          'usuarioId': alumnoId,
-          'titulo': 'Nueva evidencia: ${evidencia.titulo}',
-          'mensaje': 'Se asignó una nueva evidencia en ${materia.nombre}',
-          'tipo': 'evidencia',
-          'fecha': FieldValue.serverTimestamp(),
-          'leida': false,
-          'materiaId': materia.id,
-          'evidenciaId': id,
-        });
+        // Crear notificación para el alumno
+        _agregarNotificacionABatch(
+          batch,
+          usuarioId: alumnoId,
+          titulo: 'Nueva evidencia: ${evidencia.titulo}',
+          mensaje: 'Se asignó una nueva evidencia en ${materia.nombre}',
+          tipo: 'evidencia',
+          materiaId: materia.id,
+          evidenciaId: id,
+        );
       }
 
       await batch.commit();
@@ -720,47 +821,113 @@ class CuadernoProvider extends ChangeNotifier {
     bool notificarCalificacion = false,
   }) async {
     try {
+      // Primero obtenemos el estado anterior desde Firestore para asegurar consistencia
+      final docSnapshot = await _firestore
+          .collection('evidencias')
+          .doc(evidencia.id)
+          .get();
+
+      final evidenciaAnterior = docSnapshot.exists
+          ? Evidencia.fromMap(docSnapshot.data() as Map<String, dynamic>)
+          : null;
+
+      // Ahora actualizamos en Firestore
       await _firestore
           .collection('evidencias')
           .doc(evidencia.id)
           .update(evidencia.toMap());
+
       final idx = _evidencias.indexWhere((e) => e.id == evidencia.id);
       if (idx != -1) {
-        final evidenciaAnterior = _evidencias[idx];
         _evidencias[idx] = evidencia;
         _ordenarColecciones();
         notifyListeners();
 
-        // Si es una actualización de calificación y el usuario es profesor
-        if (notificarCalificacion &&
-            _usuario?.tipo == TipoUsuario.profesor &&
-            evidencia.calificacion != null &&
-            evidenciaAnterior.calificacion != evidencia.calificacion) {
-          final materia = _materias.firstWhere(
-            (m) => m.id == evidencia.materiaId,
-            orElse: () => Materia(
-              id: '',
-              nombre: 'Materia',
-              descripcion: '',
-              color: '#2196F3',
-              profesorId: '',
-              fechaCreacion: DateTime.now(),
-            ),
-          );
+        final materia = _materias.firstWhere(
+          (m) => m.id == evidencia.materiaId,
+          orElse: () => Materia(
+            id: '',
+            nombre: 'Materia',
+            descripcion: '',
+            color: '#2196F3',
+            profesorId: '',
+            fechaCreacion: DateTime.now(),
+          ),
+        );
 
+        // Notificar al profesor cuando alumno entrega
+        debugPrint('🔍 VERIFICANDO ENTREGA:');
+        debugPrint('   Usuario tipo: ${_usuario?.tipo}');
+        debugPrint('   Estado nuevo: ${evidencia.estado}');
+        debugPrint('   Estado anterior: ${evidenciaAnterior?.estado}');
+        debugPrint(
+          '   EvidenciaAnterior es null: ${evidenciaAnterior == null}',
+        );
+
+        if (evidenciaAnterior != null &&
+            _usuario?.tipo == TipoUsuario.alumno &&
+            evidencia.estado == EstadoEvidencia.entregado &&
+            evidenciaAnterior.estado != EstadoEvidencia.entregado) {
+          debugPrint(
+            '🔔 ✅ CONDICIÓN CUMPLIDA - Intentando crear notificación de entrega',
+          );
+          debugPrint('   Profesor ID: ${materia.profesorId}');
+          debugPrint('   Materia: ${materia.nombre}');
+          debugPrint('   Evidencia: ${evidencia.titulo}');
+          debugPrint('   Alumno: ${_usuario!.nombreCompleto}');
+          if (materia.profesorId.isNotEmpty) {
+            await _crearNotificacion(
+              usuarioId: materia.profesorId,
+              titulo: 'Nueva entrega recibida',
+              mensaje:
+                  '${_usuario!.nombreCompleto} entregó "${evidencia.titulo}" en ${materia.nombre}',
+              tipo: 'evidencia',
+              materiaId: evidencia.materiaId,
+              evidenciaId: evidencia.id,
+            );
+            debugPrint('✅ Notificación de entrega creada exitosamente');
+          } else {
+            debugPrint('❌ profesorId está vacío!');
+          }
+        } else {
+          debugPrint('❌ CONDICIÓN NO CUMPLIDA para notificar entrega');
+        }
+
+        // Si es una actualización de calificación y el usuario es profesor
+        debugPrint('🔍 VERIFICANDO CALIFICACIÓN:');
+        debugPrint('   notificarCalificacion: $notificarCalificacion');
+        debugPrint('   Usuario tipo: ${_usuario?.tipo}');
+        debugPrint('   Calificación nueva: ${evidencia.calificacionNumerica}');
+        debugPrint(
+          '   Calificación anterior: ${evidenciaAnterior?.calificacionNumerica}',
+        );
+
+        if (evidenciaAnterior != null &&
+            notificarCalificacion &&
+            _usuario?.tipo == TipoUsuario.profesor &&
+            evidencia.calificacionNumerica != null &&
+            evidenciaAnterior.calificacionNumerica !=
+                evidencia.calificacionNumerica) {
+          debugPrint(
+            '📊 ✅ CONDICIÓN CUMPLIDA - Creando notificación de calificación',
+          );
+          debugPrint('   Alumno ID: ${evidencia.alumnoId}');
+          debugPrint(
+            '   Calificación: ${evidencia.calificacionNumerica}/${evidencia.puntosTotales}',
+          );
           // Crear notificación de calificación para el alumno
-          final notifId = _uuid.v4();
-          await _firestore.collection('notificaciones').doc(notifId).set({
-            'usuarioId': evidencia.alumnoId,
-            'titulo': 'Evidencia calificada',
-            'mensaje':
-                '${evidencia.titulo} en ${materia.nombre} - Calificación: ${evidencia.calificacion}',
-            'tipo': 'calificacion',
-            'fecha': FieldValue.serverTimestamp(),
-            'leida': false,
-            'materiaId': evidencia.materiaId,
-            'evidenciaId': evidencia.id,
-          });
+          await _crearNotificacion(
+            usuarioId: evidencia.alumnoId,
+            titulo: 'Evidencia calificada',
+            mensaje:
+                '${evidencia.titulo} en ${materia.nombre} - Calificación: ${evidencia.calificacionNumerica}/${evidencia.puntosTotales}',
+            tipo: 'calificacion',
+            materiaId: evidencia.materiaId,
+            evidenciaId: evidencia.id,
+          );
+          debugPrint('✅ Notificación de calificación enviada');
+        } else {
+          debugPrint('❌ CONDICIÓN NO CUMPLIDA para notificar calificación');
         }
       }
       return true;
@@ -772,6 +939,47 @@ class CuadernoProvider extends ChangeNotifier {
 
   Future<bool> eliminarEvidencia(String evidenciaId) async {
     try {
+      // Obtener la evidencia antes de eliminarla para notificar
+      final evidencia = _evidencias.firstWhere(
+        (e) => e.id == evidenciaId,
+        orElse: () => Evidencia(
+          id: '',
+          titulo: '',
+          descripcion: '',
+          materiaId: '',
+          alumnoId: '',
+          tipo: TipoEvidencia.portafolio,
+          fechaEntrega: DateTime.now(),
+          fechaRegistro: DateTime.now(),
+          profesorId: '',
+          estado: EstadoEvidencia.asignado,
+        ),
+      );
+
+      if (evidencia.id.isNotEmpty) {
+        final materia = _materias.firstWhere(
+          (m) => m.id == evidencia.materiaId,
+          orElse: () => Materia(
+            id: '',
+            nombre: 'Materia',
+            descripcion: '',
+            color: '#2196F3',
+            profesorId: '',
+            fechaCreacion: DateTime.now(),
+          ),
+        );
+
+        // Notificar al alumno
+        await _crearNotificacion(
+          usuarioId: evidencia.alumnoId,
+          titulo: 'Evidencia eliminada',
+          mensaje:
+              'La evidencia "${evidencia.titulo}" fue eliminada de ${materia.nombre}',
+          tipo: 'evidencia',
+          materiaId: evidencia.materiaId,
+        );
+      }
+
       await _firestore.collection('evidencias').doc(evidenciaId).delete();
       _evidencias.removeWhere((e) => e.id == evidenciaId);
       _ordenarColecciones();
@@ -794,9 +1002,38 @@ class CuadernoProvider extends ChangeNotifier {
       });
       final idx = _evidencias.indexWhere((e) => e.id == evidenciaId);
       if (idx != -1) {
+        final evidencia = _evidencias[idx];
         _evidencias[idx] = _evidencias[idx].copyWith(estado: nuevoEstado);
         _ordenarColecciones();
         notifyListeners();
+
+        // Notificar al profesor cuando alumno entrega
+        if (nuevoEstado == EstadoEvidencia.entregado &&
+            _usuario?.tipo == TipoUsuario.alumno) {
+          final materia = _materias.firstWhere(
+            (m) => m.id == evidencia.materiaId,
+            orElse: () => Materia(
+              id: '',
+              nombre: 'Materia',
+              descripcion: '',
+              color: '#2196F3',
+              profesorId: '',
+              fechaCreacion: DateTime.now(),
+            ),
+          );
+
+          if (materia.profesorId.isNotEmpty) {
+            await _crearNotificacion(
+              usuarioId: materia.profesorId,
+              titulo: 'Nueva entrega recibida',
+              mensaje:
+                  '${_usuario!.nombreCompleto} entregó "${evidencia.titulo}" en ${materia.nombre}',
+              tipo: 'evidencia',
+              materiaId: evidencia.materiaId,
+              evidenciaId: evidencia.id,
+            );
+          }
+        }
       }
       return true;
     } catch (e) {

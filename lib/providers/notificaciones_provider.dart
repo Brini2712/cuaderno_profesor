@@ -47,6 +47,9 @@ class NotificacionesProvider extends ChangeNotifier {
 
   // Escuchar notificaciones en tiempo real
   void escucharNotificaciones(String usuarioId) {
+    debugPrint(
+      '👂 Iniciando escucha de notificaciones para usuario: $usuarioId',
+    );
     _notificacionesSub?.cancel();
     _notificacionesSub = _firestore
         .collection('notificaciones')
@@ -55,6 +58,9 @@ class NotificacionesProvider extends ChangeNotifier {
         .snapshots()
         .listen(
           (snapshot) {
+            debugPrint(
+              '📬 Recibidas ${snapshot.docs.length} notificaciones de Firestore',
+            );
             _notificaciones = snapshot.docs
                 .map((doc) => Notificacion.fromFirestore(doc))
                 .toList();
@@ -64,10 +70,14 @@ class NotificacionesProvider extends ChangeNotifier {
             if (_notificaciones.length > 50) {
               _notificaciones = _notificaciones.sublist(0, 50);
             }
+            debugPrint(
+              '📋 Total notificaciones cargadas: ${_notificaciones.length}',
+            );
+            debugPrint('🔴 No leídas: $notificacionesNoLeidas');
             notifyListeners();
           },
           onError: (error) {
-            debugPrint('Error escuchando notificaciones: $error');
+            debugPrint('❌ Error escuchando notificaciones: $error');
           },
         );
   }
