@@ -1385,6 +1385,34 @@ class CuadernoProvider extends ChangeNotifier {
         .replaceAll(RegExp(r'ñ'), 'n');
   }
 
+  /// Comparación alfanumérica: ordena números correctamente
+  /// Ejemplo: "Practica 2" < "Practica 10"
+  int _compareAlphanumeric(String a, String b) {
+    final regex = RegExp(r'(\d+|\D+)');
+    final partsA = regex.allMatches(a).map((m) => m.group(0)!).toList();
+    final partsB = regex.allMatches(b).map((m) => m.group(0)!).toList();
+
+    for (int i = 0; i < partsA.length && i < partsB.length; i++) {
+      final partA = partsA[i];
+      final partB = partsB[i];
+
+      final numA = int.tryParse(partA);
+      final numB = int.tryParse(partB);
+
+      if (numA != null && numB != null) {
+        // Ambos son números: comparar numéricamente
+        final cmp = numA.compareTo(numB);
+        if (cmp != 0) return cmp;
+      } else {
+        // Al menos uno es texto: comparar alfabéticamente
+        final cmp = _normalize(partA).compareTo(_normalize(partB));
+        if (cmp != 0) return cmp;
+      }
+    }
+
+    return partsA.length.compareTo(partsB.length);
+  }
+
   void _ordenarColecciones() {
     _materias.sort(
       (a, b) => _normalize(a.nombre).compareTo(_normalize(b.nombre)),
@@ -1401,7 +1429,8 @@ class CuadernoProvider extends ChangeNotifier {
       return _normalize(a.nombre).compareTo(_normalize(b.nombre));
     });
     _evidencias.sort((a, b) {
-      final byTitulo = _normalize(a.titulo).compareTo(_normalize(b.titulo));
+      // Ordenamiento alfanumérico por título
+      final byTitulo = _compareAlphanumeric(a.titulo, b.titulo);
       if (byTitulo != 0) return byTitulo;
       return a.fechaEntrega.compareTo(b.fechaEntrega);
     });
