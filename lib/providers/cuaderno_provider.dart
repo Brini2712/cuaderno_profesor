@@ -470,8 +470,9 @@ class CuadernoProvider extends ChangeNotifier {
         'alumnosIds': FieldValue.arrayUnion([_usuario!.id]),
       });
 
-      // Notificar al alumno que se unió exitosamente
       final materia = Materia.fromMap(data);
+
+      // Notificar al alumno que se unió exitosamente
       await _crearNotificacion(
         usuarioId: _usuario!.id,
         titulo: '¡Bienvenido a ${materia.nombre}!',
@@ -479,6 +480,17 @@ class CuadernoProvider extends ChangeNotifier {
         tipo: 'general',
         materiaId: materia.id,
       );
+
+      // Notificar al profesor sobre el nuevo alumno
+      if (materia.profesorId.isNotEmpty) {
+        await _crearNotificacion(
+          usuarioId: materia.profesorId,
+          titulo: 'Nuevo alumno en ${materia.nombre}',
+          mensaje: '${_usuario!.nombreCompleto} se ha unido a la clase',
+          tipo: 'general',
+          materiaId: materia.id,
+        );
+      }
 
       // Recargar materias del alumno
       await cargarMateriasAlumno();
