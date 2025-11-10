@@ -658,7 +658,17 @@ class CuadernoProvider extends ChangeNotifier {
     _ordenarColecciones();
   }
 
-  Future<void> agregarEvidencia(Evidencia evidencia) async {
+  Future<void> agregarEvidencia(
+    Evidencia evidencia, {
+    Function(
+      String usuarioId,
+      String titulo,
+      String mensaje,
+      String materiaId,
+      String evidenciaId,
+    )?
+    onNotificar,
+  }) async {
     try {
       // Obtener la materia para acceder a sus alumnos
       final materia = _materias.firstWhere((m) => m.id == evidencia.materiaId);
@@ -679,18 +689,36 @@ class CuadernoProvider extends ChangeNotifier {
           nuevaEvidencia.toMap(),
         );
         nuevasEvidencias.add(nuevaEvidencia);
+
+        // Crear notificación para el alumno en el mismo batch
+        final notifId = _uuid.v4();
+        batch.set(_firestore.collection('notificaciones').doc(notifId), {
+          'usuarioId': alumnoId,
+          'titulo': 'Nueva evidencia: ${evidencia.titulo}',
+          'mensaje': 'Se asignó una nueva evidencia en ${materia.nombre}',
+          'tipo': 'evidencia',
+          'fecha': FieldValue.serverTimestamp(),
+          'leida': false,
+          'materiaId': materia.id,
+          'evidenciaId': id,
+        });
       }
 
       await batch.commit();
+
       _evidencias.addAll(nuevasEvidencias);
       _ordenarColecciones();
       notifyListeners();
     } catch (e) {
-      _lastError = 'Error agregando evidencia';
+      _lastError = 'Error agregando evidencia: $e';
+      debugPrint('Error en agregarEvidencia: $e');
     }
   }
 
-  Future<bool> actualizarEvidencia(Evidencia evidencia) async {
+  Future<bool> actualizarEvidencia(
+    Evidencia evidencia, {
+    bool notificarCalificacion = false,
+  }) async {
     try {
       await _firestore
           .collection('evidencias')
@@ -698,9 +726,42 @@ class CuadernoProvider extends ChangeNotifier {
           .update(evidencia.toMap());
       final idx = _evidencias.indexWhere((e) => e.id == evidencia.id);
       if (idx != -1) {
+        final evidenciaAnterior = _evidencias[idx];
         _evidencias[idx] = evidencia;
         _ordenarColecciones();
         notifyListeners();
+
+        // Si es una actualización de calificación y el usuario es profesor
+        if (notificarCalificacion &&
+            _usuario?.tipo == TipoUsuario.profesor &&
+            evidencia.calificacion != null &&
+            evidenciaAnterior.calificacion != evidencia.calificacion) {
+          final materia = _materias.firstWhere(
+            (m) => m.id == evidencia.materiaId,
+            orElse: () => Materia(
+              id: '',
+              nombre: 'Materia',
+              descripcion: '',
+              color: '#2196F3',
+              profesorId: '',
+              fechaCreacion: DateTime.now(),
+            ),
+          );
+
+          // Crear notificación de calificación para el alumno
+          final notifId = _uuid.v4();
+          await _firestore.collection('notificaciones').doc(notifId).set({
+            'usuarioId': evidencia.alumnoId,
+            'titulo': 'Evidencia calificada',
+            'mensaje':
+                '${evidencia.titulo} en ${materia.nombre} - Calificación: ${evidencia.calificacion}',
+            'tipo': 'calificacion',
+            'fecha': FieldValue.serverTimestamp(),
+            'leida': false,
+            'materiaId': evidencia.materiaId,
+            'evidenciaId': evidencia.id,
+          });
+        }
       }
       return true;
     } catch (e) {

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../models/evidencia.dart';
+import '../../models/materia.dart';
 import '../../providers/cuaderno_provider.dart';
 
 class CalificarEvidenciaScreen extends StatefulWidget {
@@ -275,7 +277,10 @@ class _CalificarEvidenciaScreenState extends State<CalificarEvidenciaScreen> {
       fechaCalificacion: DateTime.now(),
     );
 
-    final ok = await provider.actualizarEvidencia(evidenciaActualizada);
+    final ok = await provider.actualizarEvidencia(
+      evidenciaActualizada,
+      notificarCalificacion: true,
+    );
 
     if (mounted) {
       setState(() => _guardando = false);
@@ -331,6 +336,32 @@ class _CalificarEvidenciaScreenState extends State<CalificarEvidenciaScreen> {
     );
 
     final ok = await provider.actualizarEvidencia(evidenciaActualizada);
+
+    // Enviar notificación al alumno sobre la devolución
+    if (ok) {
+      final materia = provider.materias.firstWhere(
+        (m) => m.id == evidenciaActualizada.materiaId,
+        orElse: () => Materia(
+          id: '',
+          nombre: 'Materia',
+          descripcion: '',
+          color: '#2196F3',
+          profesorId: '',
+          fechaCreacion: DateTime.now(),
+        ),
+      );
+      // Crear notificación
+      await FirebaseFirestore.instance.collection('notificaciones').add({
+        'usuarioId': evidenciaActualizada.alumnoId,
+        'titulo': 'Evidencia devuelta para corrección',
+        'mensaje': '${evidenciaActualizada.titulo} en ${materia.nombre}',
+        'tipo': 'evidencia',
+        'fecha': FieldValue.serverTimestamp(),
+        'leida': false,
+        'materiaId': evidenciaActualizada.materiaId,
+        'evidenciaId': evidenciaActualizada.id,
+      });
+    }
 
     if (!mounted) return;
     setState(() => _guardando = false);

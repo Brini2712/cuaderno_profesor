@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/notificacion.dart';
@@ -6,6 +7,7 @@ class NotificacionesProvider extends ChangeNotifier {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   List<Notificacion> _notificaciones = [];
   bool _isLoading = false;
+  StreamSubscription<QuerySnapshot>? _notificacionesSub;
 
   List<Notificacion> get notificaciones => _notificaciones;
   bool get isLoading => _isLoading;
@@ -22,13 +24,18 @@ class NotificacionesProvider extends ChangeNotifier {
       final snapshot = await _firestore
           .collection('notificaciones')
           .where('usuarioId', isEqualTo: usuarioId)
-          .orderBy('fecha', descending: true)
-          .limit(50)
+          .limit(100)
           .get();
 
       _notificaciones = snapshot.docs
           .map((doc) => Notificacion.fromFirestore(doc))
           .toList();
+      // Ordenar en el cliente por fecha descendente
+      _notificaciones.sort((a, b) => b.fecha.compareTo(a.fecha));
+      // Limitar a 50 más recientes
+      if (_notificaciones.length > 50) {
+        _notificaciones = _notificaciones.sublist(0, 50);
+      }
     } catch (e) {
       debugPrint('Error al cargar notificaciones: $e');
       _notificaciones = [];
@@ -39,20 +46,36 @@ class NotificacionesProvider extends ChangeNotifier {
   }
 
   // Escuchar notificaciones en tiempo real
-  Stream<List<Notificacion>> escucharNotificaciones(String usuarioId) {
-    return _firestore
+  void escucharNotificaciones(String usuarioId) {
+    _notificacionesSub?.cancel();
+    _notificacionesSub = _firestore
         .collection('notificaciones')
         .where('usuarioId', isEqualTo: usuarioId)
-        .orderBy('fecha', descending: true)
-        .limit(50)
+        .limit(100)
         .snapshots()
-        .map((snapshot) {
-          _notificaciones = snapshot.docs
-              .map((doc) => Notificacion.fromFirestore(doc))
-              .toList();
-          notifyListeners();
-          return _notificaciones;
-        });
+        .listen(
+          (snapshot) {
+            _notificaciones = snapshot.docs
+                .map((doc) => Notificacion.fromFirestore(doc))
+                .toList();
+            // Ordenar en el cliente por fecha descendente
+            _notificaciones.sort((a, b) => b.fecha.compareTo(a.fecha));
+            // Limitar a 50 más recientes
+            if (_notificaciones.length > 50) {
+              _notificaciones = _notificaciones.sublist(0, 50);
+            }
+            notifyListeners();
+          },
+          onError: (error) {
+            debugPrint('Error escuchando notificaciones: $error');
+          },
+        );
+  }
+
+  @override
+  void dispose() {
+    _notificacionesSub?.cancel();
+    super.dispose();
   }
 
   // Marcar notificación como leída

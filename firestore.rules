@@ -1,0 +1,39 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Permitir lectura y escritura autenticada para usuarios
+    match /usuarios/{userId} {
+      allow read, write: if request.auth != null;
+    }
+    
+    // Materias: profesor puede crear/editar sus materias, alumnos pueden leer
+    match /materias/{materiaId} {
+      allow read: if request.auth != null;
+      allow create, update, delete: if request.auth != null;
+    }
+    
+    // Evidencias: autenticados pueden leer/escribir
+    match /evidencias/{evidenciaId} {
+      allow read, write: if request.auth != null;
+    }
+    
+    // Asistencias: autenticados pueden leer/escribir
+    match /asistencias/{asistenciaId} {
+      allow read, write: if request.auth != null;
+    }
+    
+    // Calificaciones: autenticados pueden leer/escribir
+    match /calificaciones/{calificacionId} {
+      allow read, write: if request.auth != null;
+    }
+    
+    // Notificaciones: usuarios pueden leer sus propias notificaciones
+    // Cualquier usuario autenticado puede crear notificaciones (para que profesores puedan notificar a alumnos)
+    match /notificaciones/{notifId} {
+      allow read: if request.auth != null && 
+                     (resource == null || resource.data.usuarioId == request.auth.uid);
+      allow create: if request.auth != null;
+      allow update, delete: if request.auth != null && resource.data.usuarioId == request.auth.uid;
+    }
+  }
+}
