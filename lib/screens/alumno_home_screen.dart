@@ -433,7 +433,7 @@ class _AlumnoHomeScreenState extends State<AlumnoHomeScreen> {
                         color: Colors.white,
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withOpacity(0.05),
+                            color: Colors.black.withValues(alpha: 0.05),
                             blurRadius: 4,
                             offset: const Offset(0, 2),
                           ),
@@ -909,7 +909,6 @@ class _AlumnoHomeScreenState extends State<AlumnoHomeScreen> {
 
   void _mostrarUnirseAClase(CuadernoProvider provider) {
     final codigoController = TextEditingController();
-    final parentContext = context; // Contexto del Scaffold
     final isMobile = MediaQuery.of(context).size.width < 600;
 
     showDialog(
@@ -953,7 +952,7 @@ class _AlumnoHomeScreenState extends State<AlumnoHomeScreen> {
               Navigator.of(ctx).pop();
               final ok = await provider.unirseAMateriaPorCodigo(code);
               if (!mounted) return;
-              ScaffoldMessenger.of(parentContext).showSnackBar(
+              ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
                   content: Text(
                     ok
@@ -997,9 +996,8 @@ class _AlumnoHomeScreenState extends State<AlumnoHomeScreen> {
             onPressed: () async {
               Navigator.of(context).pop();
               await provider.cerrarSesion();
-              if (mounted) {
-                context.go('/login');
-              }
+              if (!mounted) return;
+              context.go('/login');
             },
             child: const Text('Cerrar Sesión'),
           ),

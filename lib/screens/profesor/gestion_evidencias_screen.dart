@@ -77,7 +77,7 @@ class _GestionEvidenciasScreenState extends State<GestionEvidenciasScreen> {
             )
           : ListView.separated(
               itemCount: evidenciasFiltradas.length,
-              separatorBuilder: (_, __) => const Divider(height: 1),
+              separatorBuilder: (context, index) => const Divider(height: 1),
               itemBuilder: (ctx, i) {
                 final ev = evidenciasFiltradas[i];
 
@@ -99,7 +99,9 @@ class _GestionEvidenciasScreenState extends State<GestionEvidenciasScreen> {
 
                 return ListTile(
                   leading: CircleAvatar(
-                    backgroundColor: _colorPorTipo(ev.tipo).withOpacity(0.15),
+                    backgroundColor: _colorPorTipo(
+                      ev.tipo,
+                    ).withValues(alpha: 0.15),
                     child: Icon(
                       _iconoPorTipo(ev.tipo),
                       color: _colorPorTipo(ev.tipo),
@@ -500,7 +502,7 @@ class _FormularioEvidenciaScreenState extends State<FormularioEvidenciaScreen> {
             padding: const EdgeInsets.only(right: 8.0),
             child: ElevatedButton(
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.white.withOpacity(0.15),
+                backgroundColor: Colors.white.withValues(alpha: 0.15),
                 foregroundColor: Colors.white,
                 elevation: 0,
                 padding: const EdgeInsets.symmetric(

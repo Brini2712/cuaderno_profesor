@@ -12,8 +12,9 @@ import 'package:uuid/uuid.dart';
 import '../utils/analytics.dart';
 
 class CuadernoProvider extends ChangeNotifier {
-  final AuthService _authService = AuthService();
+  // Servicios y estado base
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final AuthService _authService = AuthService();
   final Uuid _uuid = const Uuid();
 
   Usuario? _usuario;
@@ -24,7 +25,8 @@ class CuadernoProvider extends ChangeNotifier {
   List<Calificacion> _calificaciones = [];
   bool _isLoading = false;
   String? _lastError;
-
+  bool _cargandoUsuarioInicial = false;
+  StreamSubscription? _authSub;
   // Subscripciones en tiempo real
   StreamSubscription? _materiasSub;
   StreamSubscription? _asistenciasSub;
@@ -40,6 +42,55 @@ class CuadernoProvider extends ChangeNotifier {
   List<Calificacion> get calificaciones => _calificaciones;
   bool get isLoading => _isLoading;
   String? get lastError => _lastError;
+  bool get cargandoUsuarioInicial => _cargandoUsuarioInicial;
+
+  CuadernoProvider() {
+    _iniciarListenerAuth();
+  }
+
+  void _iniciarListenerAuth() {
+    _authSub?.cancel();
+    _authSub = _authService.authStateChanges.listen((user) async {
+      if (user == null) {
+        _usuario = null;
+        _materias.clear();
+        _alumnos.clear();
+        _asistencias.clear();
+        _evidencias.clear();
+        _calificaciones.clear();
+        _cancelSubscriptions();
+        notifyListeners();
+      } else {
+        // Cargar perfil Firestore
+        _cargandoUsuarioInicial = true;
+        notifyListeners();
+        try {
+          final doc = await _firestore
+              .collection('usuarios')
+              .doc(user.uid)
+              .get();
+          if (doc.exists) {
+            _usuario = Usuario.fromMap(doc.data() as Map<String, dynamic>);
+          } else {
+            // Fallback mínimo si faltara documento
+            _usuario = Usuario(
+              id: user.uid,
+              nombre: user.displayName ?? user.email ?? 'Usuario',
+              email: user.email ?? '',
+              tipo: TipoUsuario.profesor,
+              fechaCreacion: DateTime.now(),
+            );
+          }
+          unawaited(cargarDatos());
+        } catch (e) {
+          _lastError = 'No se pudo cargar perfil inicial';
+        } finally {
+          _cargandoUsuarioInicial = false;
+          notifyListeners();
+        }
+      }
+    });
+  }
 
   // Autenticación
   Future<bool> iniciarSesion(String email, String password) async {
@@ -139,8 +190,7 @@ class CuadernoProvider extends ChangeNotifier {
       }
       notifyListeners();
     } catch (e) {
-      print('Error cargando datos: $e');
-      _lastError = 'Error cargando datos';
+      _lastError = 'Error cargando datos: $e';
     }
   }
 
@@ -187,7 +237,7 @@ class CuadernoProvider extends ChangeNotifier {
       _ordenarColecciones();
       notifyListeners();
     } catch (e) {
-      print('Error agregando materia: $e');
+      _lastError = 'Error agregando materia: $e';
     }
   }
 
@@ -208,21 +258,53 @@ class CuadernoProvider extends ChangeNotifier {
     }
   }
 
-  Future<bool> eliminarMateria(String materiaId, {bool soft = true}) async {
+  Future<bool> eliminarMateria(
+    String materiaId, {
+    bool soft = true,
+    bool cascade = false,
+  }) async {
     try {
+      final docRef = _firestore.collection('materias').doc(materiaId);
       if (soft) {
-        await _firestore.collection('materias').doc(materiaId).update({
-          'activo': false,
-        });
+        // Borrado lógico: marca como inactiva
+        await docRef.update({'activo': false});
       } else {
-        await _firestore.collection('materias').doc(materiaId).delete();
+        // Borrado definitivo: elimina documento y opcionalmente registros asociados
+        if (cascade) {
+          // Eliminar evidencias relacionadas
+          final evidenciasSnap = await _firestore
+              .collection('evidencias')
+              .where('materiaId', isEqualTo: materiaId)
+              .get();
+          for (final d in evidenciasSnap.docs) {
+            await d.reference.delete();
+          }
+          // Eliminar asistencias relacionadas
+          final asistenciasSnap = await _firestore
+              .collection('asistencias')
+              .where('materiaId', isEqualTo: materiaId)
+              .get();
+          for (final d in asistenciasSnap.docs) {
+            await d.reference.delete();
+          }
+          // Eliminar calificaciones relacionadas
+          final califsSnap = await _firestore
+              .collection('calificaciones')
+              .where('materiaId', isEqualTo: materiaId)
+              .get();
+          for (final d in califsSnap.docs) {
+            await d.reference.delete();
+          }
+        }
+        await docRef.delete();
       }
+
       _materias.removeWhere((m) => m.id == materiaId);
       _ordenarColecciones();
       notifyListeners();
       return true;
     } catch (e) {
-      _lastError = 'No se pudo eliminar la materia';
+      _lastError = 'No se pudo eliminar la materia: $e';
       return false;
     }
   }
@@ -276,6 +358,67 @@ class CuadernoProvider extends ChangeNotifier {
     }
   }
 
+  // Remover alumno de una materia con borrado en cascada de sus registros asociados
+  Future<bool> removerAlumnoDeMateria(
+    String materiaId,
+    String alumnoId, {
+    bool cascade = true,
+  }) async {
+    _lastError = null;
+    try {
+      final materiaRef = _firestore.collection('materias').doc(materiaId);
+      await materiaRef.update({
+        'alumnosIds': FieldValue.arrayRemove([alumnoId]),
+      });
+
+      if (cascade) {
+        // Evidencias del alumno en esa materia
+        final evidenciasSnap = await _firestore
+            .collection('evidencias')
+            .where('materiaId', isEqualTo: materiaId)
+            .where('alumnoId', isEqualTo: alumnoId)
+            .get();
+        for (final d in evidenciasSnap.docs) {
+          await d.reference.delete();
+        }
+        // Asistencias del alumno
+        final asistenciasSnap = await _firestore
+            .collection('asistencias')
+            .where('materiaId', isEqualTo: materiaId)
+            .where('alumnoId', isEqualTo: alumnoId)
+            .get();
+        for (final d in asistenciasSnap.docs) {
+          await d.reference.delete();
+        }
+        // Calificaciones del alumno
+        final califsSnap = await _firestore
+            .collection('calificaciones')
+            .where('materiaId', isEqualTo: materiaId)
+            .where('alumnoId', isEqualTo: alumnoId)
+            .get();
+        for (final d in califsSnap.docs) {
+          await d.reference.delete();
+        }
+      }
+
+      // Actualizar cache local
+      final idx = _materias.indexWhere((m) => m.id == materiaId);
+      if (idx != -1) {
+        final materia = _materias[idx];
+        final nuevosAlumnos = List<String>.from(materia.alumnosIds)
+          ..remove(alumnoId);
+        _materias[idx] = materia.copyWith(alumnosIds: nuevosAlumnos);
+      }
+      _alumnos.removeWhere((a) => a.id == alumnoId);
+      _ordenarColecciones();
+      notifyListeners();
+      return true;
+    } catch (e) {
+      _lastError = 'Error removiendo alumno: $e';
+      return false;
+    }
+  }
+
   Future<void> agregarAlumnoAMateria(
     String materiaId,
     String codigoAcceso,
@@ -299,7 +442,7 @@ class CuadernoProvider extends ChangeNotifier {
         notifyListeners();
       }
     } catch (e) {
-      print('Error agregando alumno a materia: $e');
+      _lastError = 'Error agregando alumno a materia: $e';
     }
   }
 
@@ -351,6 +494,58 @@ class CuadernoProvider extends ChangeNotifier {
     _ordenarColecciones();
   }
 
+  // Vaciar grupo de una materia (quitar todos los alumnos) con borrado en cascada de registros
+  Future<bool> vaciarGrupoMateria(
+    String materiaId, {
+    bool cascade = true,
+  }) async {
+    _lastError = null;
+    try {
+      // Limpiar array de alumnos en materia
+      await _firestore.collection('materias').doc(materiaId).update({
+        'alumnosIds': <String>[],
+      });
+
+      if (cascade) {
+        // Borrar todas las evidencias/asistencias/calificaciones de la materia
+        final evidenciasSnap = await _firestore
+            .collection('evidencias')
+            .where('materiaId', isEqualTo: materiaId)
+            .get();
+        for (final d in evidenciasSnap.docs) {
+          await d.reference.delete();
+        }
+        final asistenciasSnap = await _firestore
+            .collection('asistencias')
+            .where('materiaId', isEqualTo: materiaId)
+            .get();
+        for (final d in asistenciasSnap.docs) {
+          await d.reference.delete();
+        }
+        final califsSnap = await _firestore
+            .collection('calificaciones')
+            .where('materiaId', isEqualTo: materiaId)
+            .get();
+        for (final d in califsSnap.docs) {
+          await d.reference.delete();
+        }
+      }
+
+      // Actualizar caché local
+      final idx = _materias.indexWhere((m) => m.id == materiaId);
+      if (idx != -1) {
+        _materias[idx] = _materias[idx].copyWith(alumnosIds: []);
+      }
+      // No removemos usuarios globales del cache, solo de esta materia
+      _ordenarColecciones();
+      notifyListeners();
+      return true;
+    } catch (e) {
+      _lastError = 'Error vaciando grupo: $e';
+      return false;
+    }
+  }
+
   Future<void> registrarAsistencia(RegistroAsistencia asistencia) async {
     try {
       final id = asistencia.id.isEmpty ? _uuid.v4() : asistencia.id;
@@ -359,7 +554,7 @@ class CuadernoProvider extends ChangeNotifier {
       _asistencias.add(nuevo);
       notifyListeners();
     } catch (e) {
-      print('Error registrando asistencia: $e');
+      _lastError = 'Error registrando asistencia';
     }
   }
 
@@ -491,7 +686,6 @@ class CuadernoProvider extends ChangeNotifier {
       _ordenarColecciones();
       notifyListeners();
     } catch (e) {
-      print('Error agregando evidencia: $e');
       _lastError = 'Error agregando evidencia';
     }
   }
@@ -577,7 +771,7 @@ class CuadernoProvider extends ChangeNotifier {
   }
 
   double calcularPorcentajeEvidencias(String alumnoId, String materiaId) {
-    List<Evidencia> evidenciasAlumno = _evidencias
+    final evidenciasAlumno = _evidencias
         .where((e) => e.alumnoId == alumnoId && e.materiaId == materiaId)
         .toList();
     if (evidenciasAlumno.isEmpty) return 0.0;
@@ -595,21 +789,12 @@ class CuadernoProvider extends ChangeNotifier {
     final total = materia.totalEvidenciasEsperadas == 0
         ? 1
         : materia.totalEvidenciasEsperadas;
-    return (evidenciasAlumno.length / total) * 100;
-  }
-
-  bool tieneRiesgoReprobacion(String alumnoId, String materiaId) {
-    double porcentajeAsistencia = calcularPorcentajeAsistencia(
-      alumnoId,
-      materiaId,
-    );
-    double porcentajeEvidencias = calcularPorcentajeEvidencias(
-      alumnoId,
-      materiaId,
-    );
-    return AnalyticsUtils.riesgoReprobacion(
-      porcentajeAsistencia: porcentajeAsistencia,
-      porcentajeEvidencias: porcentajeEvidencias,
+    final entregadas = evidenciasAlumno
+        .where((e) => e.estado != EstadoEvidencia.asignado)
+        .length;
+    return AnalyticsUtils.porcentajeEvidencias(
+      entregadas: entregadas,
+      esperadas: total,
     );
   }
 
@@ -628,6 +813,21 @@ class CuadernoProvider extends ChangeNotifier {
     );
   }
 
+  bool tieneRiesgoReprobacion(String alumnoId, String materiaId) {
+    final porcentajeAsistencia = calcularPorcentajeAsistencia(
+      alumnoId,
+      materiaId,
+    );
+    final porcentajeEvidencias = calcularPorcentajeEvidencias(
+      alumnoId,
+      materiaId,
+    );
+    return AnalyticsUtils.riesgoReprobacion(
+      porcentajeAsistencia: porcentajeAsistencia,
+      porcentajeEvidencias: porcentajeEvidencias,
+    );
+  }
+
   // ============= REPORTES WEB =============
   /// Genera un reporte de estadísticas para una materia en un rango de fechas
   ReporteEstadisticas generarReporte({
@@ -638,34 +838,24 @@ class CuadernoProvider extends ChangeNotifier {
     final materia = _materias.firstWhere(
       (m) => m.id == materiaId,
       orElse: () => Materia(
-        id: '',
-        nombre: 'Desconocida',
+        id: 'tmp',
+        nombre: 'tmp',
         descripcion: '',
         color: '#2196F3',
-        profesorId: '',
+        profesorId: _usuario?.id ?? '',
         fechaCreacion: DateTime.now(),
       ),
     );
 
-    final List<EstadisticaAlumno> estadisticas = [];
+    final estadisticas = <EstadisticaAlumno>[];
 
-    for (final alumnoId in materia.alumnosIds) {
-      final alumno = _alumnos.firstWhere(
-        (a) => a.id == alumnoId,
-        orElse: () => Usuario(
-          id: alumnoId,
-          nombre: 'Desconocido',
-          email: '',
-          tipo: TipoUsuario.alumno,
-          fechaCreacion: DateTime.now(),
-        ),
-      );
-
-      // Filtrar asistencias en el rango
+    for (final alumno in _alumnos.where(
+      (a) => materia.alumnosIds.contains(a.id),
+    )) {
       final asistenciasRango = _asistencias
           .where(
             (a) =>
-                a.alumnoId == alumnoId &&
+                a.alumnoId == alumno.id &&
                 a.materiaId == materiaId &&
                 a.fecha.isAfter(
                   fechaInicio.subtract(const Duration(days: 1)),
@@ -674,11 +864,10 @@ class CuadernoProvider extends ChangeNotifier {
           )
           .toList();
 
-      // Filtrar evidencias en el rango
       final evidenciasRango = _evidencias
           .where(
             (e) =>
-                e.alumnoId == alumnoId &&
+                e.alumnoId == alumno.id &&
                 e.materiaId == materiaId &&
                 e.fechaEntrega.isAfter(
                   fechaInicio.subtract(const Duration(days: 1)),
@@ -694,15 +883,14 @@ class CuadernoProvider extends ChangeNotifier {
       final entregadas = evidenciasRango
           .where((e) => e.estado != EstadoEvidencia.asignado)
           .length;
-      final total = evidenciasRango.length;
+      final total = evidenciasRango.isEmpty ? 1 : evidenciasRango.length;
       final porcentajeEvid = AnalyticsUtils.porcentajeEvidencias(
         entregadas: entregadas,
         esperadas: total,
       );
 
-      // Evaluaciones reprobadas (simulamos con calificaciones numéricas < 6)
       final califs = _calificaciones
-          .where((c) => c.alumnoId == alumnoId && c.materiaId == materiaId)
+          .where((c) => c.alumnoId == alumno.id && c.materiaId == materiaId)
           .toList();
       int evaluacionesReprobadas = 0;
       if (califs.isNotEmpty) {
@@ -713,8 +901,9 @@ class CuadernoProvider extends ChangeNotifier {
           evaluacionesReprobadas++;
         }
         if (calif.actividadComplementaria != null &&
-            calif.actividadComplementaria! < 6)
+            calif.actividadComplementaria! < 6) {
           evaluacionesReprobadas++;
+        }
       }
 
       final tieneRiesgo = AnalyticsUtils.riesgoReprobacion(
@@ -731,7 +920,7 @@ class CuadernoProvider extends ChangeNotifier {
 
       estadisticas.add(
         EstadisticaAlumno(
-          alumnoId: alumnoId,
+          alumnoId: alumno.id,
           alumnoNombre: alumno.nombreCompleto,
           porcentajeAsistencia: porcentajeAsist,
           porcentajeEvidencias: porcentajeEvid,

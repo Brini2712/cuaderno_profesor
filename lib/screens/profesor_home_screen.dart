@@ -245,7 +245,7 @@ class _ProfesorHomeScreenState extends State<ProfesorHomeScreen> {
                         color: Colors.white,
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withOpacity(0.05),
+                            color: Colors.black.withValues(alpha: 0.05),
                             blurRadius: 4,
                             offset: const Offset(0, 2),
                           ),
@@ -295,7 +295,7 @@ class _ProfesorHomeScreenState extends State<ProfesorHomeScreen> {
           ),
           floatingActionButton: _selectedIndex == 1
               ? FloatingActionButton.extended(
-                  onPressed: () => _mostrarCrearMateria(context, provider),
+                  onPressed: () => _mostrarCrearMateria(provider),
                   icon: const Icon(Icons.add),
                   label: const Text('Crear materia'),
                 )
@@ -436,7 +436,7 @@ class _ProfesorHomeScreenState extends State<ProfesorHomeScreen> {
                   ),
                   const SizedBox(height: 16),
                   FilledButton.icon(
-                    onPressed: () => _mostrarCrearMateria(context, provider),
+                    onPressed: () => _mostrarCrearMateria(provider),
                     icon: const Icon(Icons.add),
                     label: const Text('Crear tu primera materia'),
                   ),
@@ -468,7 +468,7 @@ class _ProfesorHomeScreenState extends State<ProfesorHomeScreen> {
           border: Border.all(color: Colors.grey[200]!),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.05),
+              color: Colors.black.withValues(alpha: 0.05),
               blurRadius: 10,
               offset: const Offset(0, 4),
             ),
@@ -508,7 +508,7 @@ class _ProfesorHomeScreenState extends State<ProfesorHomeScreen> {
               title: 'No tienes materias',
               subtitle: 'Crea tu primera materia para empezar',
               actionText: 'Crear Materia',
-              onAction: () => _mostrarCrearMateria(context, provider),
+              onAction: () => _mostrarCrearMateria(provider),
             )
           : ListView.builder(
               padding: const EdgeInsets.all(16),
@@ -535,7 +535,7 @@ class _ProfesorHomeScreenState extends State<ProfesorHomeScreen> {
         title: 'Sin materias para tomar asistencia',
         subtitle: 'Crea una materia y agrega alumnos para comenzar',
         actionText: 'Crear Materia',
-        onAction: () => _mostrarCrearMateria(context, provider),
+        onAction: () => _mostrarCrearMateria(provider),
       );
     }
 
@@ -575,7 +575,7 @@ class _ProfesorHomeScreenState extends State<ProfesorHomeScreen> {
         title: 'Sin materias para gestionar evidencias',
         subtitle: 'Crea una materia primero',
         actionText: 'Crear Materia',
-        onAction: () => _mostrarCrearMateria(context, provider),
+        onAction: () => _mostrarCrearMateria(provider),
       );
     }
 
@@ -694,7 +694,7 @@ class _ProfesorHomeScreenState extends State<ProfesorHomeScreen> {
     );
   }
 
-  void _mostrarCrearMateria(BuildContext context, CuadernoProvider provider) {
+  void _mostrarCrearMateria(CuadernoProvider provider) {
     showDialog(
       context: context,
       builder: (context) => CrearMateriaDialog(
@@ -732,7 +732,7 @@ class _ProfesorHomeScreenState extends State<ProfesorHomeScreen> {
     );
   }
 
-  void _copiarCodigo(BuildContext context, Materia materia) {
+  void _copiarCodigo(BuildContext ctx, Materia materia) {
     final code = materia.codigoAcceso ?? '';
     if (code.isEmpty) return;
     Clipboard.setData(ClipboardData(text: code));
@@ -742,7 +742,7 @@ class _ProfesorHomeScreenState extends State<ProfesorHomeScreen> {
   }
 
   void _confirmarEliminar(
-    BuildContext context,
+    BuildContext ctx,
     CuadernoProvider provider,
     Materia materia,
   ) {
@@ -750,8 +750,17 @@ class _ProfesorHomeScreenState extends State<ProfesorHomeScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Eliminar materia'),
-        content: Text(
-          '¿Eliminar "${materia.nombre}"? Puedes restaurarla luego (borrado lógico).',
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('¿Deseas eliminar definitivamente "${materia.nombre}"?'),
+            const SizedBox(height: 12),
+            const Text(
+              'Esta acción eliminará también evidencias, asistencias y calificaciones asociadas. No se puede deshacer.',
+              style: TextStyle(fontSize: 13, color: Colors.redAccent),
+            ),
+          ],
         ),
         actions: [
           TextButton(
@@ -761,20 +770,28 @@ class _ProfesorHomeScreenState extends State<ProfesorHomeScreen> {
           FilledButton(
             onPressed: () async {
               Navigator.pop(ctx);
-              final ok = await provider.eliminarMateria(materia.id, soft: true);
+              final ok = await provider.eliminarMateria(
+                materia.id,
+                soft: false,
+                cascade: true,
+              );
               if (!mounted) return;
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
                   content: Text(
                     ok
-                        ? 'Materia eliminada'
+                        ? 'Materia eliminada definitivamente'
                         : (provider.lastError ?? 'No se pudo eliminar'),
                   ),
                   backgroundColor: ok ? Colors.green : Colors.red,
                 ),
               );
             },
-            child: const Text('Eliminar'),
+            style: FilledButton.styleFrom(
+              backgroundColor: Colors.red.shade600,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Eliminar definitivamente'),
           ),
         ],
       ),
@@ -782,7 +799,7 @@ class _ProfesorHomeScreenState extends State<ProfesorHomeScreen> {
   }
 
   void _editarMateria(
-    BuildContext context,
+    BuildContext ctx,
     CuadernoProvider provider,
     Materia materia,
   ) {

@@ -1,10 +1,18 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart';
 import '../models/usuario.dart';
 
 class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+
+  AuthService() {
+    // En web, asegura persistencia local para mantener sesión tras refresh
+    if (kIsWeb) {
+      _auth.setPersistence(Persistence.LOCAL);
+    }
+  }
 
   String? lastError;
 

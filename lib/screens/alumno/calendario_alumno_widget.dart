@@ -89,7 +89,7 @@ class _CalendarioAlumnoWidgetState extends State<CalendarioAlumnoWidget> {
           SizedBox(
             width: 240,
             child: DropdownButtonFormField<String?>(
-              value: _materiaFiltro,
+              initialValue: _materiaFiltro,
               isExpanded: true,
               decoration: const InputDecoration(
                 labelText: 'Materia',
@@ -204,9 +204,10 @@ class _CalendarioAlumnoWidgetState extends State<CalendarioAlumnoWidget> {
               ? const Center(child: Text('Sin evidencias este día'))
               : ListView.separated(
                   itemCount: lista.length,
-                  separatorBuilder: (_, __) => const Divider(height: 1),
-                  itemBuilder: (ctx, i) {
-                    final e = lista[i];
+                  separatorBuilder: (context, index) =>
+                      const Divider(height: 1),
+                  itemBuilder: (context, index) {
+                    final e = lista[index];
                     final atrasado = e.estaAtrasado;
                     final color = _colorPorEstado(e.estado);
                     return ListTile(

@@ -813,6 +813,7 @@ class _DetalleEvidenciaAlumnoScreenState
       });
 
       // Persistir en Firestore
+      if (!mounted) return;
       final provider = context.read<CuadernoProvider>();
       final updated = widget.evidencia.copyWith(
         archivosAdjuntos: _archivosAdjuntos,
@@ -842,6 +843,7 @@ class _DetalleEvidenciaAlumnoScreenState
     try {
       final uri = Uri.parse(url);
       if (!await canLaunchUrl(uri)) {
+        if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('No se pudo abrir el enlace')),
         );
@@ -849,6 +851,7 @@ class _DetalleEvidenciaAlumnoScreenState
       }
       await launchUrl(uri, mode: LaunchMode.externalApplication);
     } catch (_) {
+      if (!mounted) return;
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(const SnackBar(content: Text('Enlace inválido')));

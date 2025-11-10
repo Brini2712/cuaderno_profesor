@@ -263,6 +263,7 @@ class _TomarAsistenciaScreenState extends State<TomarAsistenciaScreen> {
     );
     if (seleccionado != null) {
       setState(() => _fecha = seleccionado);
+      if (!mounted) return;
       final provider = context.read<CuadernoProvider>();
       _prefill(provider);
     }
@@ -296,18 +297,15 @@ class _TomarAsistenciaScreenState extends State<TomarAsistenciaScreen> {
       fecha: _fecha,
       registros: registros,
     );
-    if (mounted) {
-      setState(() => _guardando = false);
-      final mensaje = provider.lastError ?? 'Asistencias guardadas';
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(mensaje),
-          backgroundColor: provider.lastError == null
-              ? Colors.green
-              : Colors.red,
-        ),
-      );
-    }
+    if (!mounted) return;
+    setState(() => _guardando = false);
+    final mensaje = provider.lastError ?? 'Asistencias guardadas';
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(mensaje),
+        backgroundColor: provider.lastError == null ? Colors.green : Colors.red,
+      ),
+    );
   }
 
   void _prefill(CuadernoProvider provider) {

@@ -143,7 +143,7 @@ class _NotificacionesScreenState extends State<NotificacionesScreen> {
           side: BorderSide(
             color: notif.leida
                 ? Colors.grey[200]!
-                : notif.color.withOpacity(0.3),
+                : notif.color.withValues(alpha: 0.3),
             width: notif.leida ? 1 : 2,
           ),
         ),
@@ -164,7 +164,7 @@ class _NotificacionesScreenState extends State<NotificacionesScreen> {
                 Container(
                   padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
-                    color: notif.color.withOpacity(0.1),
+                    color: notif.color.withValues(alpha: 0.1),
                     shape: BoxShape.circle,
                   ),
                   child: Icon(

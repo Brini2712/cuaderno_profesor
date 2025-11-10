@@ -359,6 +359,7 @@ class _PerfilScreenState extends State<PerfilScreen> {
     setState(() => _subiendoFoto = true);
 
     try {
+      if (!mounted) return;
       final provider = context.read<CuadernoProvider>();
       final usuario = provider.usuario!;
 

@@ -6,6 +6,7 @@ import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 import 'package:csv/csv.dart';
+// ignore_for_file: avoid_web_libraries_in_flutter, deprecated_member_use
 import 'dart:html' as html;
 import 'dart:convert';
 import '../../providers/cuaderno_provider.dart';
@@ -727,7 +728,7 @@ class _ReportesWebScreenState extends State<ReportesWebScreen> {
               ),
               if (_evaluacionSeleccionada != null)
                 pw.Text(
-                  'Evaluación: ${_evaluacionSeleccionada}',
+                  'Evaluación: $_evaluacionSeleccionada',
                   style: const pw.TextStyle(fontSize: 11),
                 ),
               pw.SizedBox(height: 10),
@@ -792,7 +793,7 @@ class _ReportesWebScreenState extends State<ReportesWebScreen> {
             ),
             pw.SizedBox(height: 8),
 
-            pw.Table.fromTextArray(
+            pw.TableHelper.fromTextArray(
               headers: const [
                 'Alumno',
                 'Asistencia',
@@ -911,7 +912,7 @@ class _ReportesWebScreenState extends State<ReportesWebScreen> {
       eol: '\r\n',
     );
     final String csv = converter.convert(rows);
-    final bytes = utf8.encode('\uFEFF' + csv); // BOM + CSV
+    final bytes = utf8.encode('\uFEFF$csv'); // BOM + CSV
     final blob = html.Blob([bytes]);
     final url = html.Url.createObjectUrlFromBlob(blob);
     html.AnchorElement(href: url)

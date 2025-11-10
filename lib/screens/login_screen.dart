@@ -372,38 +372,38 @@ class _LoginScreenState extends State<LoginScreen> {
         );
       }
 
-      if (mounted) {
-        if (success) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(
-                _isLogin
-                    ? '¡Inicio de sesión exitoso!'
-                    : '¡Cuenta creada exitosamente!',
-              ),
-              backgroundColor: Colors.green,
+      if (!mounted) return;
+      if (success) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              _isLogin
+                  ? '¡Inicio de sesión exitoso!'
+                  : '¡Cuenta creada exitosamente!',
             ),
-          );
-          // Navegar según el tipo de usuario
-          Future.delayed(const Duration(milliseconds: 500), () {
-            if (provider.usuario?.tipo == TipoUsuario.profesor) {
-              context.go('/profesor');
-            } else {
-              context.go('/alumno');
-            }
-          });
-        } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(
-                _isLogin
-                    ? 'Error al iniciar sesión. Verifica tus credenciales.'
-                    : 'Error al crear la cuenta. Intenta nuevamente.',
-              ),
-              backgroundColor: Colors.red,
+            backgroundColor: Colors.green,
+          ),
+        );
+        // Navegar según el tipo de usuario
+        Future.delayed(const Duration(milliseconds: 500), () {
+          if (!mounted) return;
+          if (provider.usuario?.tipo == TipoUsuario.profesor) {
+            context.go('/profesor');
+          } else {
+            context.go('/alumno');
+          }
+        });
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              _isLogin
+                  ? 'Error al iniciar sesión. Verifica tus credenciales.'
+                  : 'Error al crear la cuenta. Intenta nuevamente.',
             ),
-          );
-        }
+            backgroundColor: Colors.red,
+          ),
+        );
       }
     }
   }
@@ -449,19 +449,18 @@ class _LoginScreenState extends State<LoginScreen> {
                 final ok = await provider.resetPassword(
                   emailController.text.trim(),
                 );
-                if (context.mounted) {
-                  Navigator.of(ctx).pop();
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(
-                        ok
-                            ? 'Te enviamos un correo para restablecer tu contraseña.'
-                            : provider.lastError ??
-                                  'No se pudo enviar el correo.',
-                      ),
+                if (!context.mounted) return;
+                Navigator.of(ctx).pop();
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      ok
+                          ? 'Te enviamos un correo para restablecer tu contraseña.'
+                          : provider.lastError ??
+                                'No se pudo enviar el correo.',
                     ),
-                  );
-                }
+                  ),
+                );
               }
             },
             child: const Text('Enviar'),

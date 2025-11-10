@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 import 'firebase_options.dart';
 import 'providers/cuaderno_provider.dart';
+import 'models/usuario.dart';
 import 'providers/notificaciones_provider.dart';
 import 'screens/login_screen.dart';
 import 'screens/profesor_home_screen.dart';
@@ -29,64 +30,93 @@ class CuadernoProfesorApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => CuadernoProvider()),
         ChangeNotifierProvider(create: (_) => NotificacionesProvider()),
       ],
-      child: MaterialApp.router(
-        title: 'Cuaderno Profesor',
-        debugShowCheckedModeBanner: false,
-        theme: ThemeData(
-          primarySwatch: Colors.blue,
-          primaryColor: const Color(0xFF1976D2),
-          colorScheme: ColorScheme.fromSeed(
-            seedColor: const Color(0xFF1976D2),
-            brightness: Brightness.light,
-          ),
-          appBarTheme: const AppBarTheme(
-            backgroundColor: Color(0xFF1976D2),
-            foregroundColor: Colors.white,
-            elevation: 0,
-          ),
-          cardTheme: const CardThemeData(elevation: 2),
-          inputDecorationTheme: InputDecorationTheme(
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-            filled: true,
-            fillColor: Colors.grey[50],
-          ),
-          elevatedButtonTheme: ElevatedButtonThemeData(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF1976D2),
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
+      child: Builder(
+        builder: (context) {
+          final provider = context.watch<CuadernoProvider>();
+          final router = GoRouter(
+            initialLocation: '/login',
+            refreshListenable: provider,
+            redirect: (context, state) {
+              // Mientras se carga el usuario inicial, no redirigimos
+              if (provider.cargandoUsuarioInicial) return null;
+              final usuario = provider.usuario;
+              final loggingIn = state.matchedLocation == '/login';
+              if (usuario == null) {
+                return loggingIn ? null : '/login';
+              }
+              if (loggingIn) {
+                return usuario.tipo == TipoUsuario.profesor
+                    ? '/profesor'
+                    : '/alumno';
+              }
+              return null;
+            },
+            routes: [
+              GoRoute(
+                path: '/login',
+                builder: (context, state) => const LoginScreen(),
               ),
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              GoRoute(
+                path: '/profesor',
+                builder: (context, state) => const ProfesorHomeScreen(),
+              ),
+              GoRoute(
+                path: '/alumno',
+                builder: (context, state) => const AlumnoHomeScreen(),
+              ),
+              GoRoute(
+                path: '/notificaciones',
+                builder: (context, state) => const NotificacionesScreen(),
+              ),
+              GoRoute(
+                path: '/reportes',
+                builder: (context, state) => const ReportesWebScreen(),
+              ),
+            ],
+          );
+
+          return MaterialApp.router(
+            title: 'Cuaderno Profesor',
+            debugShowCheckedModeBanner: false,
+            theme: ThemeData(
+              primarySwatch: Colors.blue,
+              primaryColor: const Color(0xFF1976D2),
+              colorScheme: ColorScheme.fromSeed(
+                seedColor: const Color(0xFF1976D2),
+                brightness: Brightness.light,
+              ),
+              appBarTheme: const AppBarTheme(
+                backgroundColor: Color(0xFF1976D2),
+                foregroundColor: Colors.white,
+                elevation: 0,
+              ),
+              cardTheme: const CardThemeData(elevation: 2),
+              inputDecorationTheme: InputDecorationTheme(
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                filled: true,
+                fillColor: Colors.grey[50],
+              ),
+              elevatedButtonTheme: ElevatedButtonThemeData(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF1976D2),
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 24,
+                    vertical: 12,
+                  ),
+                ),
+              ),
+              useMaterial3: true,
             ),
-          ),
-          useMaterial3: true,
-        ),
-        routerConfig: _router,
+            routerConfig: router,
+          );
+        },
       ),
     );
   }
 }
-
-final GoRouter _router = GoRouter(
-  initialLocation: '/login',
-  routes: [
-    GoRoute(path: '/login', builder: (context, state) => const LoginScreen()),
-    GoRoute(
-      path: '/profesor',
-      builder: (context, state) => const ProfesorHomeScreen(),
-    ),
-    GoRoute(
-      path: '/alumno',
-      builder: (context, state) => const AlumnoHomeScreen(),
-    ),
-    GoRoute(
-      path: '/notificaciones',
-      builder: (context, state) => const NotificacionesScreen(),
-    ),
-    GoRoute(
-      path: '/reportes',
-      builder: (context, state) => const ReportesWebScreen(),
-    ),
-  ],
-);

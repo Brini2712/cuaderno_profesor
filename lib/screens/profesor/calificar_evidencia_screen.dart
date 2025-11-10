@@ -322,6 +322,7 @@ class _CalificarEvidenciaScreenState extends State<CalificarEvidenciaScreen> {
     if (confirmar != true) return;
 
     setState(() => _guardando = true);
+    if (!mounted) return;
     final provider = context.read<CuadernoProvider>();
 
     final evidenciaActualizada = widget.evidencia.copyWith(
@@ -331,24 +332,23 @@ class _CalificarEvidenciaScreenState extends State<CalificarEvidenciaScreen> {
 
     final ok = await provider.actualizarEvidencia(evidenciaActualizada);
 
-    if (mounted) {
-      setState(() => _guardando = false);
-      if (ok) {
-        Navigator.pop(context);
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Trabajo devuelto para corrección'),
-            backgroundColor: Colors.orange,
-          ),
-        );
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(provider.lastError ?? 'Error'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
+    if (!mounted) return;
+    setState(() => _guardando = false);
+    if (ok) {
+      Navigator.pop(context);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Trabajo devuelto para corrección'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(provider.lastError ?? 'Error'),
+          backgroundColor: Colors.red,
+        ),
+      );
     }
   }
 }

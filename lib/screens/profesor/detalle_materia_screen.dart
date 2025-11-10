@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../../models/materia.dart';
+import '../../models/usuario.dart';
 import '../../providers/cuaderno_provider.dart';
 
 class DetalleMateriaScreen extends StatelessWidget {
@@ -106,15 +107,71 @@ class _AlumnosTab extends StatelessWidget {
         final u = alumnos[i];
         return ListTile(
           leading: CircleAvatar(
-            child: Text(u.nombre.substring(0, 1).toUpperCase()),
+            child: Text(
+              (u.apellidoPaterno?.isNotEmpty == true
+                      ? u.apellidoPaterno!
+                      : u.nombreCompleto)
+                  .substring(0, 1)
+                  .toUpperCase(),
+            ),
           ),
-          title: Text(
-            '${u.apellidoPaterno ?? ''} ${u.apellidoMaterno ?? ''} ${u.nombre}'
-                .trim(),
-          ),
+          title: Text(u.nombreCompleto),
           subtitle: Text(u.email),
+          trailing: IconButton(
+            icon: const Icon(Icons.person_remove),
+            tooltip: 'Remover alumno',
+            onPressed: () => _confirmarRemoverAlumno(context, provider, u),
+          ),
         );
       },
+    );
+  }
+
+  void _confirmarRemoverAlumno(
+    BuildContext context,
+    CuadernoProvider provider,
+    Usuario alumno,
+  ) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Remover alumno'),
+        content: Text(
+          '¿Remover a "${alumno.nombreCompleto}" de la materia? Se eliminarán sus evidencias, asistencias y calificaciones asociadas.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(
+              backgroundColor: Colors.red.shade600,
+              foregroundColor: Colors.white,
+            ),
+            onPressed: () async {
+              Navigator.pop(ctx);
+              final ok = await provider.removerAlumnoDeMateria(
+                materia.id,
+                alumno.id,
+                cascade: true,
+              );
+              if (!context.mounted) return;
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(
+                    ok
+                        ? 'Alumno removido'
+                        : (provider.lastError ?? 'Error removiendo alumno'),
+                  ),
+                  backgroundColor: ok ? Colors.green : Colors.red,
+                ),
+              );
+            },
+            child: const Text('Remover'),
+          ),
+        ],
+      ),
     );
   }
 }
