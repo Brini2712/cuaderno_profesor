@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:table_calendar/table_calendar.dart';
 import 'package:intl/intl.dart';
-import '../../models/evidencia.dart';
+import '../../models/actividad.dart';
 import '../../providers/cuaderno_provider.dart';
 import 'detalle_evidencia_alumno_screen.dart';
 

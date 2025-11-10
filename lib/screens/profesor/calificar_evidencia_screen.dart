@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import '../../models/evidencia.dart';
+import '../../models/actividad.dart';
 import '../../models/materia.dart';
 import '../../providers/cuaderno_provider.dart';
 
@@ -16,16 +16,14 @@ class CalificarEvidenciaScreen extends StatefulWidget {
 }
 
 class _CalificarEvidenciaScreenState extends State<CalificarEvidenciaScreen> {
-  late TextEditingController _calificacionCtrl;
   late TextEditingController _comentarioCtrl;
+  CalificacionEvidencia? _calificacionSeleccionada;
   bool _guardando = false;
 
   @override
   void initState() {
     super.initState();
-    _calificacionCtrl = TextEditingController(
-      text: widget.evidencia.calificacionNumerica?.toString() ?? '',
-    );
+    _calificacionSeleccionada = widget.evidencia.calificacion;
     _comentarioCtrl = TextEditingController(
       text: widget.evidencia.comentarioProfesor ?? '',
     );
@@ -33,7 +31,6 @@ class _CalificarEvidenciaScreenState extends State<CalificarEvidenciaScreen> {
 
   @override
   void dispose() {
-    _calificacionCtrl.dispose();
     _comentarioCtrl.dispose();
     super.dispose();
   }
@@ -216,19 +213,29 @@ class _CalificarEvidenciaScreenState extends State<CalificarEvidenciaScreen> {
                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 16),
+                const Text(
+                  'Selecciona la calificación',
+                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+                ),
+                const SizedBox(height: 12),
                 Row(
                   children: [
-                    Expanded(
-                      child: TextFormField(
-                        controller: _calificacionCtrl,
-                        decoration: InputDecoration(
-                          labelText: 'Puntos',
-                          hintText: widget.evidencia.puntosTotales.toString(),
-                          border: const OutlineInputBorder(),
-                          suffixText: '/ ${widget.evidencia.puntosTotales}',
-                        ),
-                        keyboardType: TextInputType.number,
-                      ),
+                    _buildCalificacionChip(
+                      letra: 'A',
+                      valor: 10,
+                      calificacion: CalificacionEvidencia.A,
+                    ),
+                    const SizedBox(width: 12),
+                    _buildCalificacionChip(
+                      letra: 'B',
+                      valor: 8,
+                      calificacion: CalificacionEvidencia.B,
+                    ),
+                    const SizedBox(width: 12),
+                    _buildCalificacionChip(
+                      letra: 'C',
+                      valor: 6,
+                      calificacion: CalificacionEvidencia.C,
                     ),
                   ],
                 ),
@@ -251,16 +258,58 @@ class _CalificarEvidenciaScreenState extends State<CalificarEvidenciaScreen> {
     );
   }
 
-  Future<void> _guardarCalificacion() async {
-    final calificacion = double.tryParse(_calificacionCtrl.text.trim());
-    if (calificacion == null ||
-        calificacion < 0 ||
-        calificacion > widget.evidencia.puntosTotales) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Ingresa una calificación entre 0 y ${widget.evidencia.puntosTotales}',
+  Widget _buildCalificacionChip({
+    required String letra,
+    required int valor,
+    required CalificacionEvidencia calificacion,
+  }) {
+    final isSelected = _calificacionSeleccionada == calificacion;
+    return Expanded(
+      child: InkWell(
+        onTap: () => setState(() => _calificacionSeleccionada = calificacion),
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 16),
+          decoration: BoxDecoration(
+            color: isSelected ? Colors.green.shade50 : Colors.grey.shade100,
+            border: Border.all(
+              color: isSelected ? Colors.green : Colors.grey.shade300,
+              width: isSelected ? 2 : 1,
+            ),
+            borderRadius: BorderRadius.circular(12),
           ),
+          child: Column(
+            children: [
+              Text(
+                letra,
+                style: TextStyle(
+                  fontSize: 32,
+                  fontWeight: FontWeight.bold,
+                  color: isSelected ? Colors.green : Colors.grey.shade700,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                '$valor puntos',
+                style: TextStyle(
+                  fontSize: 14,
+                  color: isSelected
+                      ? Colors.green.shade700
+                      : Colors.grey.shade600,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _guardarCalificacion() async {
+    if (_calificacionSeleccionada == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Selecciona una calificación'),
           backgroundColor: Colors.red,
         ),
       );
@@ -271,7 +320,7 @@ class _CalificarEvidenciaScreenState extends State<CalificarEvidenciaScreen> {
     final provider = context.read<CuadernoProvider>();
 
     final evidenciaActualizada = widget.evidencia.copyWith(
-      calificacionNumerica: calificacion,
+      calificacion: _calificacionSeleccionada,
       comentarioProfesor: _comentarioCtrl.text.trim(),
       estado: EstadoEvidencia.calificado,
       fechaCalificacion: DateTime.now(),

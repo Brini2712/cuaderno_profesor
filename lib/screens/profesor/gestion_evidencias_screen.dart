@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../../models/evidencia.dart';
+import '../../models/actividad.dart';
 import '../../models/materia.dart';
 import '../../providers/cuaderno_provider.dart';
 import 'detalle_evidencia_profesor_screen.dart';
@@ -61,7 +61,7 @@ class _GestionEvidenciasScreenState extends State<GestionEvidenciasScreen> {
     return Scaffold(
       key: _scaffoldKey,
       appBar: AppBar(
-        title: Text('Evidencias - ${widget.materia.nombre}'),
+        title: Text('Actividades - ${widget.materia.nombre}'),
         actions: [
           IconButton(
             tooltip: 'Filtros',
@@ -73,7 +73,7 @@ class _GestionEvidenciasScreenState extends State<GestionEvidenciasScreen> {
       endDrawer: _buildFiltrosDrawer(),
       body: evidenciasFiltradas.isEmpty
           ? const Center(
-              child: Text('No hay evidencias para los filtros seleccionados'),
+              child: Text('No hay actividades para los filtros seleccionados'),
             )
           : ListView.separated(
               itemCount: evidenciasFiltradas.length,
@@ -447,7 +447,6 @@ class _FormularioEvidenciaScreenState extends State<FormularioEvidenciaScreen> {
   final _formKey = GlobalKey<FormState>();
   late TextEditingController _tituloCtrl;
   late TextEditingController _descripcionCtrl;
-  late TextEditingController _calificacionCtrl;
   late TextEditingController _observacionesCtrl;
   String? _alumnoSeleccionado;
   TipoEvidencia _tipo = TipoEvidencia.actividad;
@@ -462,9 +461,6 @@ class _FormularioEvidenciaScreenState extends State<FormularioEvidenciaScreen> {
     _tituloCtrl = TextEditingController(text: widget.evidencia?.titulo ?? '');
     _descripcionCtrl = TextEditingController(
       text: widget.evidencia?.descripcion ?? '',
-    );
-    _calificacionCtrl = TextEditingController(
-      text: widget.evidencia?.calificacionNumerica?.toString() ?? '',
     );
     _observacionesCtrl = TextEditingController(
       text: widget.evidencia?.observaciones ?? '',
@@ -482,7 +478,6 @@ class _FormularioEvidenciaScreenState extends State<FormularioEvidenciaScreen> {
   void dispose() {
     _tituloCtrl.dispose();
     _descripcionCtrl.dispose();
-    _calificacionCtrl.dispose();
     _observacionesCtrl.dispose();
     super.dispose();
   }
@@ -660,40 +655,6 @@ class _FormularioEvidenciaScreenState extends State<FormularioEvidenciaScreen> {
                 ),
               ),
 
-            // Puntos (Calificación)
-            ListTile(
-              leading: const Icon(Icons.assessment_outlined),
-              title: const Text('Puntos'),
-              trailing: SizedBox(
-                width: 100,
-                child: TextFormField(
-                  controller: _calificacionCtrl,
-                  decoration: const InputDecoration(
-                    hintText: '100',
-                    border: OutlineInputBorder(),
-                    contentPadding: EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 8,
-                    ),
-                  ),
-                  keyboardType: TextInputType.number,
-                  textAlign: TextAlign.center,
-                  validator: (v) {
-                    if (v == null || v.trim().isEmpty) return null;
-                    final num = double.tryParse(v);
-                    if (num == null || num < 0 || num > 100) {
-                      return 'Ingresa 0-100';
-                    }
-                    return null;
-                  },
-                ),
-              ),
-              contentPadding: const EdgeInsets.symmetric(
-                horizontal: 24,
-                vertical: 8,
-              ),
-            ),
-
             // Fecha de entrega
             ListTile(
               leading: const Icon(Icons.calendar_today_outlined),
@@ -781,9 +742,6 @@ class _FormularioEvidenciaScreenState extends State<FormularioEvidenciaScreen> {
 
     setState(() => _guardando = true);
     final provider = context.read<CuadernoProvider>();
-    final calNum = _calificacionCtrl.text.trim().isEmpty
-        ? null
-        : double.tryParse(_calificacionCtrl.text.trim());
 
     final evidencia = Evidencia(
       id: widget.evidencia?.id ?? '',
@@ -794,7 +752,6 @@ class _FormularioEvidenciaScreenState extends State<FormularioEvidenciaScreen> {
       descripcion: _descripcionCtrl.text.trim(),
       tipo: _tipo,
       estado: _estado,
-      calificacionNumerica: calNum,
       fechaEntrega: _fechaEntrega,
       fechaRegistro: widget.evidencia?.fechaRegistro ?? DateTime.now(),
       profesorId: provider.usuario!.id,

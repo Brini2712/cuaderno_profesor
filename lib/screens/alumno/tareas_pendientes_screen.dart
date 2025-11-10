@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../../providers/cuaderno_provider.dart';
-import '../../models/evidencia.dart';
+import '../../models/actividad.dart';
 import 'detalle_evidencia_alumno_screen.dart';
 
 class TareasPendientesScreen extends StatefulWidget {
@@ -73,11 +73,7 @@ class _TareasPendientesScreenState extends State<TareasPendientesScreen> {
               scrollDirection: Axis.horizontal,
               child: Row(
                 children: [
-                  _buildFiltroChip(
-                    'Todas',
-                    'todas',
-                    todasLasEvidencias.length,
-                  ),
+                  _buildFiltroChip('Todas', 'todas', todasLasEvidencias.length),
                   const SizedBox(width: 8),
                   _buildFiltroChip(
                     'Esta semana',
@@ -91,11 +87,7 @@ class _TareasPendientesScreenState extends State<TareasPendientesScreen> {
                     proximaSemana.length,
                   ),
                   const SizedBox(width: 8),
-                  _buildFiltroChip(
-                    'Más tarde',
-                    'mas_tarde',
-                    masTarde.length,
-                  ),
+                  _buildFiltroChip('Más tarde', 'mas_tarde', masTarde.length),
                 ],
               ),
             ),
@@ -107,19 +99,22 @@ class _TareasPendientesScreenState extends State<TareasPendientesScreen> {
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(Icons.task_alt,
-                            size: 64, color: Colors.grey[400]),
+                        Icon(Icons.task_alt, size: 64, color: Colors.grey[400]),
                         const SizedBox(height: 16),
                         Text(
                           'No hay tareas pendientes',
                           style: TextStyle(
-                              fontSize: 18, color: Colors.grey[600]),
+                            fontSize: 18,
+                            color: Colors.grey[600],
+                          ),
                         ),
                         const SizedBox(height: 8),
                         Text(
                           '¡Buen trabajo!',
-                          style:
-                              TextStyle(fontSize: 14, color: Colors.grey[500]),
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: Colors.grey[500],
+                          ),
                         ),
                       ],
                     ),
@@ -129,58 +124,62 @@ class _TareasPendientesScreenState extends State<TareasPendientesScreen> {
                     child: ListView(
                       padding: EdgeInsets.all(isMobile ? 8 : 16),
                       children: [
-                  if (vencidas.isNotEmpty) ...[
-                    _buildSeccionHeader(
-                      'Vencidas',
-                      vencidas.length,
-                      Colors.red,
+                        if (vencidas.isNotEmpty) ...[
+                          _buildSeccionHeader(
+                            'Vencidas',
+                            vencidas.length,
+                            Colors.red,
+                          ),
+                          ...vencidas.map(
+                            (e) =>
+                                _buildTareaCard(e, provider, context, isMobile),
+                          ),
+                          const SizedBox(height: 16),
+                        ],
+                        if (estaSemana.isNotEmpty &&
+                            _filtro != 'proxima_semana' &&
+                            _filtro != 'mas_tarde') ...[
+                          _buildSeccionHeader(
+                            'Esta semana',
+                            estaSemana.length,
+                            Colors.orange,
+                          ),
+                          ...estaSemana.map(
+                            (e) =>
+                                _buildTareaCard(e, provider, context, isMobile),
+                          ),
+                          const SizedBox(height: 16),
+                        ],
+                        if (proximaSemana.isNotEmpty &&
+                            _filtro != 'esta_semana' &&
+                            _filtro != 'mas_tarde') ...[
+                          _buildSeccionHeader(
+                            'Próxima semana',
+                            proximaSemana.length,
+                            Colors.blue,
+                          ),
+                          ...proximaSemana.map(
+                            (e) =>
+                                _buildTareaCard(e, provider, context, isMobile),
+                          ),
+                          const SizedBox(height: 16),
+                        ],
+                        if (masTarde.isNotEmpty &&
+                            _filtro != 'esta_semana' &&
+                            _filtro != 'proxima_semana') ...[
+                          _buildSeccionHeader(
+                            'Más tarde',
+                            masTarde.length,
+                            Colors.green,
+                          ),
+                          ...masTarde.map(
+                            (e) =>
+                                _buildTareaCard(e, provider, context, isMobile),
+                          ),
+                        ],
+                      ],
                     ),
-                    ...vencidas.map(
-                      (e) => _buildTareaCard(e, provider, context, isMobile),
-                    ),
-                    const SizedBox(height: 16),
-                  ],
-                  if (estaSemana.isNotEmpty &&
-                      _filtro != 'proxima_semana' &&
-                      _filtro != 'mas_tarde') ...[
-                    _buildSeccionHeader(
-                      'Esta semana',
-                      estaSemana.length,
-                      Colors.orange,
-                    ),
-                    ...estaSemana.map(
-                      (e) => _buildTareaCard(e, provider, context, isMobile),
-                    ),
-                    const SizedBox(height: 16),
-                  ],
-                  if (proximaSemana.isNotEmpty &&
-                      _filtro != 'esta_semana' &&
-                      _filtro != 'mas_tarde') ...[
-                    _buildSeccionHeader(
-                      'Próxima semana',
-                      proximaSemana.length,
-                      Colors.blue,
-                    ),
-                    ...proximaSemana.map(
-                      (e) => _buildTareaCard(e, provider, context, isMobile),
-                    ),
-                    const SizedBox(height: 16),
-                  ],
-                  if (masTarde.isNotEmpty &&
-                      _filtro != 'esta_semana' &&
-                      _filtro != 'proxima_semana') ...[
-                    _buildSeccionHeader(
-                      'Más tarde',
-                      masTarde.length,
-                      Colors.green,
-                    ),
-                    ...masTarde.map(
-                      (e) => _buildTareaCard(e, provider, context, isMobile),
-                    ),
-                  ],
-                ],
-              ),
-            ),
+                  ),
           ),
         ],
       ),
@@ -389,3 +388,4 @@ class _TareasPendientesScreenState extends State<TareasPendientesScreen> {
     );
   }
 }
+

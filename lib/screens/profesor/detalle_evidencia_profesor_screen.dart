@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../../models/evidencia.dart';
+import '../../models/actividad.dart';
 import '../../models/materia.dart';
 import '../../providers/cuaderno_provider.dart';
 import 'calificar_evidencia_screen.dart';
@@ -301,6 +301,14 @@ class _DetalleEvidenciaProfesorScreenState
                       fontWeight: FontWeight.bold,
                       color: Colors.green,
                     ),
+                  )
+                else if (evidencia.calificacion != null)
+                  Text(
+                    'Calificación: ${_letraCalif(evidencia.calificacion!)} (${evidencia.valorNumerico})/${evidencia.puntosTotales}',
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: Colors.green,
+                    ),
                   ),
                 if (evidencia.comentarioAlumno != null &&
                     evidencia.comentarioAlumno!.isNotEmpty)
@@ -341,6 +349,17 @@ class _DetalleEvidenciaProfesorScreenState
         return 'Actividad';
       case TipoEvidencia.examen:
         return 'Examen';
+    }
+  }
+
+  String _letraCalif(CalificacionEvidencia c) {
+    switch (c) {
+      case CalificacionEvidencia.A:
+        return 'A';
+      case CalificacionEvidencia.B:
+        return 'B';
+      case CalificacionEvidencia.C:
+        return 'C';
     }
   }
 }

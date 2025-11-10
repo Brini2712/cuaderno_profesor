@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../models/asistencia.dart';
-import '../../models/evidencia.dart';
+import '../../models/actividad.dart';
 import '../../models/materia.dart';
 import '../../providers/cuaderno_provider.dart';
 import 'detalle_evidencia_alumno_screen.dart';
@@ -167,6 +167,15 @@ class _AlumnoEvidenciasScreenState extends State<AlumnoEvidenciasScreen> {
                                       fontSize: 12,
                                       color: Colors.green,
                                     ),
+                                  )
+                                else if (ev.calificacion != null)
+                                  Text(
+                                    'Calificación: ${_letraCalif(ev.calificacion!)} (${ev.valorNumerico})',
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 12,
+                                      color: Colors.green,
+                                    ),
                                   ),
                                 if (ev.observaciones != null &&
                                     ev.observaciones!.isNotEmpty)
@@ -272,11 +281,22 @@ class _AlumnoEvidenciasScreenState extends State<AlumnoEvidenciasScreen> {
     }
   }
 
+  String _letraCalif(CalificacionEvidencia c) {
+    switch (c) {
+      case CalificacionEvidencia.A:
+        return 'A';
+      case CalificacionEvidencia.B:
+        return 'B';
+      case CalificacionEvidencia.C:
+        return 'C';
+    }
+  }
+
   Widget _buildEstadisticasDetalladas(
     CuadernoProvider provider,
     bool isMobile,
   ) {
-    // Obtener asistencias de esta materia
+    // Asistencias del alumno en la materia
     final asistencias = provider.asistencias
         .where(
           (a) =>
@@ -289,11 +309,12 @@ class _AlumnoEvidenciasScreenState extends State<AlumnoEvidenciasScreen> {
     final asistenciasPresente = asistencias
         .where((a) => a.tipo == TipoAsistencia.asistencia)
         .length;
-    final porcentajeAsistencia = totalClases > 0
-        ? (asistenciasPresente / totalClases) * 100
-        : 0;
+    final porcentajeAsistencia = provider.calcularPorcentajeAsistencia(
+      provider.usuario!.id,
+      widget.materia.id,
+    );
 
-    // Obtener evidencias de esta materia
+    // Evidencias del alumno en la materia
     final evidencias = provider.evidencias
         .where(
           (e) =>
@@ -301,7 +322,6 @@ class _AlumnoEvidenciasScreenState extends State<AlumnoEvidenciasScreen> {
               e.materiaId == widget.materia.id,
         )
         .toList();
-
     final totalEvidencias = evidencias.length;
     final evidenciasEntregadas = evidencias
         .where((e) => e.estado != EstadoEvidencia.asignado)

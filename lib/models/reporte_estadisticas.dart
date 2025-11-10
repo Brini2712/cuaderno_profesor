@@ -41,6 +41,18 @@ class ReporteEstadisticas {
 
   int get alumnosConOrdinaria =>
       estadisticasAlumnos.where((a) => a.requiereOrdinaria).length;
+
+  double get promedioCalificacionGrupo {
+    final alumnosConCalificacion = estadisticasAlumnos
+        .where((a) => a.calificacionFinal != null)
+        .toList();
+    if (alumnosConCalificacion.isEmpty) return 0.0;
+    final suma = alumnosConCalificacion.fold(
+      0.0,
+      (prev, e) => prev + e.calificacionFinal!,
+    );
+    return suma / alumnosConCalificacion.length;
+  }
 }
 
 class EstadisticaAlumno {
@@ -55,6 +67,8 @@ class EstadisticaAlumno {
   final bool requiereOrdinaria; // Si reprobó 2+ evaluaciones
   final bool
   tieneDatosSuficientes; // Si hay asistencias O evidencias registradas
+  final double?
+  calificacionFinal; // Promedio de todas las evidencias calificadas
 
   EstadisticaAlumno({
     required this.alumnoId,
@@ -66,6 +80,7 @@ class EstadisticaAlumno {
     required this.puedeExentar,
     required this.requiereOrdinaria,
     this.tieneDatosSuficientes = true,
+    this.calificacionFinal,
   });
 
   String get estadoGeneral {

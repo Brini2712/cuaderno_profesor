@@ -4,7 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/usuario.dart';
 import '../models/materia.dart';
 import '../models/asistencia.dart';
-import '../models/evidencia.dart';
+import '../models/actividad.dart';
 import '../models/calificacion.dart';
 import '../models/reporte_estadisticas.dart';
 import '../services/auth_service.dart';
@@ -709,11 +709,26 @@ class CuadernoProvider extends ChangeNotifier {
         ),
       );
 
+      // Verificar si ya existía asistencia previa para saber si es actualización
+      final asistenciasPreviasMap = <String, RegistroAsistencia>{};
+      for (final doc in prevDocs) {
+        final data = doc.data();
+        final alumnoId = data['alumnoId'] as String?;
+        if (alumnoId != null && alumnosSet.contains(alumnoId)) {
+          asistenciasPreviasMap[alumnoId] = RegistroAsistencia.fromMap(data);
+        }
+      }
+
       for (final reg in registros) {
         final id = _uuid.v4();
         final nuevo = reg.copyWith(id: id);
         batch.set(_firestore.collection('asistencias').doc(id), nuevo.toMap());
         nuevosLoc.add(nuevo);
+
+        // Verificar si es actualización o registro nuevo
+        final asistenciaPrevia = asistenciasPreviasMap[reg.alumnoId];
+        final esActualizacion = asistenciaPrevia != null;
+        final cambioTipo = asistenciaPrevia?.tipo != reg.tipo;
 
         // Notificar al alumno sobre su asistencia
         String estadoTexto;
@@ -732,11 +747,27 @@ class CuadernoProvider extends ChangeNotifier {
             break;
         }
 
+        // Construir mensaje según si es actualización o nuevo registro
+        String mensaje;
+        String titulo;
+        if (esActualizacion && cambioTipo) {
+          titulo = 'Asistencia actualizada';
+          final estadoAnterior = _obtenerTextoTipo(asistenciaPrevia.tipo);
+          mensaje =
+              'Tu asistencia en ${materia.nombre} cambió de $estadoAnterior a $estadoTexto';
+        } else if (esActualizacion) {
+          titulo = '$estadoTexto actualizada';
+          mensaje = 'Se actualizó tu asistencia en ${materia.nombre}';
+        } else {
+          titulo = '$estadoTexto registrada';
+          mensaje = 'Se registró tu asistencia en ${materia.nombre}';
+        }
+
         _agregarNotificacionABatch(
           batch,
           usuarioId: reg.alumnoId,
-          titulo: '$estadoTexto registrada',
-          mensaje: 'Se registró tu asistencia en ${materia.nombre}',
+          titulo: titulo,
+          mensaje: mensaje,
           tipo: 'asistencia',
           materiaId: materiaId,
         );
@@ -759,6 +790,20 @@ class CuadernoProvider extends ChangeNotifier {
       _lastError = e.message ?? 'Error guardando asistencias (Firebase)';
     } catch (e) {
       _lastError = 'Error guardando asistencias';
+    }
+  }
+
+  // Helper para obtener texto de tipo de asistencia
+  String _obtenerTextoTipo(TipoAsistencia tipo) {
+    switch (tipo) {
+      case TipoAsistencia.asistencia:
+        return 'Asistencia';
+      case TipoAsistencia.justificacion:
+        return 'Falta justificada';
+      case TipoAsistencia.retardo:
+        return 'Retardo';
+      case TipoAsistencia.falta:
+        return 'Falta';
     }
   }
 
@@ -969,30 +1014,69 @@ class CuadernoProvider extends ChangeNotifier {
         debugPrint('🔍 VERIFICANDO CALIFICACIÓN:');
         debugPrint('   notificarCalificacion: $notificarCalificacion');
         debugPrint('   Usuario tipo: ${_usuario?.tipo}');
-        debugPrint('   Calificación nueva: ${evidencia.calificacionNumerica}');
         debugPrint(
-          '   Calificación anterior: ${evidenciaAnterior?.calificacionNumerica}',
+          '   Calificación nueva (numérica): ${evidencia.calificacionNumerica}',
         );
+        debugPrint('   Calificación nueva (letra): ${evidencia.calificacion}');
+        debugPrint(
+          '   Calificación anterior (numérica): ${evidenciaAnterior?.calificacionNumerica}',
+        );
+        debugPrint(
+          '   Calificación anterior (letra): ${evidenciaAnterior?.calificacion}',
+        );
+
+        // Verificar si hay una calificación nueva (numérica O letra)
+        final tieneCalificacionNueva =
+            evidencia.calificacionNumerica != null ||
+            evidencia.calificacion != null;
+        final calificacionCambio =
+            evidenciaAnterior != null &&
+            (evidenciaAnterior.calificacionNumerica !=
+                    evidencia.calificacionNumerica ||
+                evidenciaAnterior.calificacion != evidencia.calificacion);
 
         if (evidenciaAnterior != null &&
             notificarCalificacion &&
             _usuario?.tipo == TipoUsuario.profesor &&
-            evidencia.calificacionNumerica != null &&
-            evidenciaAnterior.calificacionNumerica !=
-                evidencia.calificacionNumerica) {
+            tieneCalificacionNueva &&
+            calificacionCambio) {
           debugPrint(
             '📊 ✅ CONDICIÓN CUMPLIDA - Creando notificación de calificación',
           );
           debugPrint('   Alumno ID: ${evidencia.alumnoId}');
-          debugPrint(
-            '   Calificación: ${evidencia.calificacionNumerica}/${evidencia.puntosTotales}',
-          );
+
+          // Determinar si había calificación previa
+          final teniaCalificacionPrevia =
+              evidenciaAnterior.calificacionNumerica != null ||
+              evidenciaAnterior.calificacion != null;
+
+          // Construir mensaje según el tipo de calificación
+          final String mensajeCalificacion;
+          if (evidencia.calificacionNumerica != null) {
+            mensajeCalificacion =
+                'Calificación: ${evidencia.calificacionNumerica}/${evidencia.puntosTotales}';
+          } else if (evidencia.calificacion != null) {
+            final letra = evidencia.calificacion.toString().split('.').last;
+            final valor = evidencia.valorNumerico;
+            mensajeCalificacion = 'Calificación: $letra ($valor)';
+          } else {
+            mensajeCalificacion = 'Tu trabajo ha sido calificado';
+          }
+
+          debugPrint('   Mensaje: $mensajeCalificacion');
+          debugPrint('   Tenía calificación previa: $teniaCalificacionPrevia');
+
+          // Título varía según si es nueva calificación o actualización
+          final titulo = teniaCalificacionPrevia
+              ? 'Calificación actualizada'
+              : 'Evidencia calificada';
+
           // Crear notificación de calificación para el alumno
           await _crearNotificacion(
             usuarioId: evidencia.alumnoId,
-            titulo: 'Evidencia calificada',
+            titulo: titulo,
             mensaje:
-                '${evidencia.titulo} en ${materia.nombre} - Calificación: ${evidencia.calificacionNumerica}/${evidencia.puntosTotales}',
+                '${evidencia.titulo} en ${materia.nombre} - $mensajeCalificacion',
             tipo: 'calificacion',
             materiaId: evidencia.materiaId,
             evidenciaId: evidencia.id,
@@ -1000,6 +1084,14 @@ class CuadernoProvider extends ChangeNotifier {
           debugPrint('✅ Notificación de calificación enviada');
         } else {
           debugPrint('❌ CONDICIÓN NO CUMPLIDA para notificar calificación');
+          if (!notificarCalificacion)
+            debugPrint('   Razón: notificarCalificacion = false');
+          if (_usuario?.tipo != TipoUsuario.profesor)
+            debugPrint('   Razón: usuario no es profesor');
+          if (!tieneCalificacionNueva)
+            debugPrint('   Razón: no hay calificación nueva');
+          if (!calificacionCambio)
+            debugPrint('   Razón: calificación no cambió');
         }
       }
       return true;
@@ -1293,6 +1385,88 @@ class CuadernoProvider extends ChangeNotifier {
 
       final requiereOrd = evaluacionesReprobadas >= 2;
 
+      // Calcular calificación final basada en evidencias calificadas
+      // agrupadas por tipo según criterio: Examen 40% + Portafolio 40% + Actividad 20%
+      double? calificacionFinal;
+
+      final evidenciasCalificadas = evidenciasRango
+          .where((e) => e.estado == EstadoEvidencia.calificado)
+          .toList();
+
+      if (evidenciasCalificadas.isNotEmpty) {
+        // Calcular promedio por tipo de evidencia
+        double? promedioExamen;
+        double? promedioPortafolio;
+        double? promedioActividad;
+
+        // Examenes
+        final examenes = evidenciasCalificadas
+            .where((e) => e.tipo == TipoEvidencia.examen)
+            .toList();
+        if (examenes.isNotEmpty) {
+          double suma = 0.0;
+          double sumaPesos = 0.0;
+          for (final ev in examenes) {
+            suma += ev.valorNumerico * ev.puntosTotales;
+            sumaPesos += ev.puntosTotales;
+          }
+          promedioExamen = sumaPesos > 0 ? suma / sumaPesos : null;
+        }
+
+        // Portafolio
+        final portafolios = evidenciasCalificadas
+            .where((e) => e.tipo == TipoEvidencia.portafolio)
+            .toList();
+        if (portafolios.isNotEmpty) {
+          double suma = 0.0;
+          double sumaPesos = 0.0;
+          for (final ev in portafolios) {
+            suma += ev.valorNumerico * ev.puntosTotales;
+            sumaPesos += ev.puntosTotales;
+          }
+          promedioPortafolio = sumaPesos > 0 ? suma / sumaPesos : null;
+        }
+
+        // Actividades
+        final actividades = evidenciasCalificadas
+            .where((e) => e.tipo == TipoEvidencia.actividad)
+            .toList();
+        if (actividades.isNotEmpty) {
+          double suma = 0.0;
+          double sumaPesos = 0.0;
+          for (final ev in actividades) {
+            suma += ev.valorNumerico * ev.puntosTotales;
+            sumaPesos += ev.puntosTotales;
+          }
+          promedioActividad = sumaPesos > 0 ? suma / sumaPesos : null;
+        }
+
+        // Calcular calificación final con los porcentajes del criterio
+        // Solo si tenemos al menos un componente
+        if (promedioExamen != null ||
+            promedioPortafolio != null ||
+            promedioActividad != null) {
+          double suma = 0.0;
+          double pesoTotal = 0.0;
+
+          if (promedioExamen != null) {
+            suma += promedioExamen * 0.4;
+            pesoTotal += 0.4;
+          }
+          if (promedioPortafolio != null) {
+            suma += promedioPortafolio * 0.4;
+            pesoTotal += 0.4;
+          }
+          if (promedioActividad != null) {
+            suma += promedioActividad * 0.2;
+            pesoTotal += 0.2;
+          }
+
+          // Normalizar si no están todos los componentes
+          calificacionFinal = pesoTotal > 0 ? suma / pesoTotal : null;
+        }
+      }
+
       estadisticas.add(
         EstadisticaAlumno(
           alumnoId: alumno.id,
@@ -1304,6 +1478,7 @@ class CuadernoProvider extends ChangeNotifier {
           puedeExentar: puedeExent,
           requiereOrdinaria: requiereOrd,
           tieneDatosSuficientes: tieneDatosSuficientes,
+          calificacionFinal: calificacionFinal,
         ),
       );
     }

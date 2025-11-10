@@ -411,6 +411,12 @@ class _ReportesWebScreenState extends State<ReportesWebScreen> {
                   ),
                   DataColumn(
                     label: Text(
+                      'Calificación\nFinal',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                  DataColumn(
+                    label: Text(
                       'Asistencia',
                       style: TextStyle(fontWeight: FontWeight.bold),
                     ),
@@ -438,6 +444,22 @@ class _ReportesWebScreenState extends State<ReportesWebScreen> {
                   return DataRow(
                     cells: [
                       DataCell(Text(alumno.alumnoNombre)),
+                      DataCell(
+                        Text(
+                          alumno.calificacionFinal != null
+                              ? alumno.calificacionFinal!.toStringAsFixed(1)
+                              : 'N/A',
+                          style: TextStyle(
+                            color: alumno.calificacionFinal != null
+                                ? (alumno.calificacionFinal! >= 6
+                                      ? Colors.green
+                                      : Colors.red)
+                                : Colors.grey,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                          ),
+                        ),
+                      ),
                       DataCell(
                         Text(
                           '${alumno.porcentajeAsistencia.toStringAsFixed(1)}%',
@@ -786,6 +808,12 @@ class _ReportesWebScreenState extends State<ReportesWebScreen> {
                   baseColor,
                   lightFill,
                 ),
+                _kpiBox(
+                  'Calificación Promedio',
+                  reporte.promedioCalificacionGrupo.toStringAsFixed(1),
+                  baseColor,
+                  lightFill,
+                ),
               ],
             ),
             pw.SizedBox(height: 18),
@@ -803,15 +831,19 @@ class _ReportesWebScreenState extends State<ReportesWebScreen> {
             pw.TableHelper.fromTextArray(
               headers: const [
                 'Alumno',
+                'Cal. Final',
                 'Asistencia',
                 'Evidencias',
-                'Eval. Reprobadas',
+                'Eval. Rep.',
                 'Estado',
               ],
               data: [
                 for (final alumno in reporte.estadisticasAlumnos)
                   [
                     alumno.alumnoNombre,
+                    alumno.calificacionFinal != null
+                        ? alumno.calificacionFinal!.toStringAsFixed(1)
+                        : 'N/A',
                     '${alumno.porcentajeAsistencia.toStringAsFixed(1)}%',
                     '${alumno.porcentajeEvidencias.toStringAsFixed(1)}%',
                     '${alumno.evaluacionesReprobadas}/3',
@@ -832,8 +864,9 @@ class _ReportesWebScreenState extends State<ReportesWebScreen> {
                 0: const pw.FlexColumnWidth(2.2),
                 1: const pw.FlexColumnWidth(1),
                 2: const pw.FlexColumnWidth(1),
-                3: const pw.FlexColumnWidth(1.2),
-                4: const pw.FlexColumnWidth(1.2),
+                3: const pw.FlexColumnWidth(1),
+                4: const pw.FlexColumnWidth(1),
+                5: const pw.FlexColumnWidth(1.2),
               },
             ),
           ];
@@ -895,6 +928,7 @@ class _ReportesWebScreenState extends State<ReportesWebScreen> {
     // Encabezados de la tabla
     rows.add([
       'Alumno',
+      'Calificación Final',
       'Asistencia (%)',
       'Evidencias (%)',
       'Evaluaciones Reprobadas',
@@ -905,6 +939,9 @@ class _ReportesWebScreenState extends State<ReportesWebScreen> {
     for (final alumno in reporte.estadisticasAlumnos) {
       rows.add([
         alumno.alumnoNombre,
+        alumno.calificacionFinal != null
+            ? alumno.calificacionFinal!.toStringAsFixed(1)
+            : 'N/A',
         alumno.porcentajeAsistencia.toStringAsFixed(1),
         alumno.porcentajeEvidencias.toStringAsFixed(1),
         '${alumno.evaluacionesReprobadas}/3',

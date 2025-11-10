@@ -5,7 +5,7 @@ import 'package:firebase_storage/firebase_storage.dart';
 import 'dart:io' show File;
 import '../providers/cuaderno_provider.dart';
 import '../models/usuario.dart';
-import '../models/evidencia.dart';
+import '../models/actividad.dart';
 
 class PerfilScreen extends StatefulWidget {
   const PerfilScreen({super.key});

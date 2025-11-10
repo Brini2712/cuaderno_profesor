@@ -4,7 +4,7 @@ import 'package:provider/provider.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:url_launcher/url_launcher.dart';
-import '../../models/evidencia.dart';
+import '../../models/actividad.dart';
 import '../../providers/cuaderno_provider.dart';
 
 class DetalleEvidenciaAlumnoScreen extends StatefulWidget {
@@ -938,3 +938,4 @@ class _DetalleEvidenciaAlumnoScreenState
     );
   }
 }
+

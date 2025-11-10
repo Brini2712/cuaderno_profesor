@@ -5,7 +5,7 @@ import '../providers/notificaciones_provider.dart';
 import '../providers/theme_provider.dart';
 import 'package:go_router/go_router.dart';
 import '../models/materia.dart';
-import '../models/evidencia.dart';
+import '../models/actividad.dart';
 import 'alumno/alumno_evidencias_screen.dart';
 import 'alumno/calendario_alumno_widget.dart';
 import 'alumno/tareas_pendientes_screen.dart';
@@ -981,7 +981,9 @@ class _AlumnoHomeScreenState extends State<AlumnoHomeScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              materia.nombre,
+                              materia.grupo != null && materia.grupo!.isNotEmpty
+                                  ? '${materia.nombre} - Grupo ${materia.grupo}'
+                                  : materia.nombre,
                               style: const TextStyle(
                                 fontSize: 18,
                                 fontWeight: FontWeight.bold,
