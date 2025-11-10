@@ -276,11 +276,16 @@ class _DetalleEvidenciaProfesorScreenState
                   ? Colors.green
                   : Colors.blue,
               child: Text(
-                alumno.nombre.substring(0, 1).toUpperCase(),
+                // Inicial basada en apellido paterno si existe, si no primer caracter del nombreCompleto
+                (alumno.apellidoPaterno?.isNotEmpty == true
+                        ? alumno.apellidoPaterno!
+                        : alumno.nombreCompleto)
+                    .substring(0, 1)
+                    .toUpperCase(),
                 style: const TextStyle(color: Colors.white),
               ),
             ),
-            title: Text(alumno.nombre),
+            title: Text(alumno.nombreCompleto),
             subtitle: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [

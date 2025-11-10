@@ -26,7 +26,9 @@ class _PerfilScreenState extends State<PerfilScreen> {
   void initState() {
     super.initState();
     final usuario = context.read<CuadernoProvider>().usuario!;
-    _nombreController = TextEditingController(text: usuario.nombre);
+    // Usamos nombreCompleto para edición; si aún no están los apellidos capturados
+    // el getter nombreCompleto construirá la mejor representación.
+    _nombreController = TextEditingController(text: usuario.nombreCompleto);
     _emailController = TextEditingController(text: usuario.email);
   }
 
@@ -88,7 +90,9 @@ class _PerfilScreenState extends State<PerfilScreen> {
                               usuario.fotoUrl == null ||
                                   usuario.fotoUrl!.isEmpty
                               ? Text(
-                                  usuario.nombre.substring(0, 1).toUpperCase(),
+                                  usuario.nombreCompleto
+                                      .substring(0, 1)
+                                      .toUpperCase(),
                                   style: const TextStyle(
                                     fontSize: 48,
                                     color: Colors.white,
@@ -368,7 +372,11 @@ class _PerfilScreenState extends State<PerfilScreen> {
       final url = await ref.getDownloadURL();
 
       // Actualizar usuario
-      await provider.actualizarPerfil(nombre: usuario.nombre, fotoUrl: url);
+      // Mantener nombre completo actual al cambiar foto
+      await provider.actualizarPerfil(
+        nombre: usuario.nombreCompleto,
+        fotoUrl: url,
+      );
 
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -394,7 +402,7 @@ class _PerfilScreenState extends State<PerfilScreen> {
 
   void _cancelarEdicion() {
     final usuario = context.read<CuadernoProvider>().usuario!;
-    _nombreController.text = usuario.nombre;
+    _nombreController.text = usuario.nombreCompleto;
     setState(() => _editando = false);
   }
 

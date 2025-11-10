@@ -16,6 +16,15 @@ class DetalleMateriaScreen extends StatelessWidget {
         appBar: AppBar(
           title: Text(materia.nombre),
           bottom: const TabBar(
+            labelColor: Colors.white,
+            unselectedLabelColor: Colors.white70,
+            indicatorColor: Colors.white,
+            indicatorWeight: 3,
+            labelStyle: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+            unselectedLabelStyle: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.normal,
+            ),
             tabs: [
               Tab(text: 'Info'),
               Tab(text: 'Alumnos'),
@@ -73,9 +82,21 @@ class _AlumnosTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final provider = context.watch<CuadernoProvider>();
-    final alumnos = provider.alumnos
-        .where((a) => materia.alumnosIds.contains(a.id))
-        .toList();
+    final alumnos =
+        provider.alumnos
+            .where((a) => materia.alumnosIds.contains(a.id))
+            .toList()
+          ..sort((a, b) {
+            int cmpApPat = (a.apellidoPaterno ?? '').compareTo(
+              b.apellidoPaterno ?? '',
+            );
+            if (cmpApPat != 0) return cmpApPat;
+            int cmpApMat = (a.apellidoMaterno ?? '').compareTo(
+              b.apellidoMaterno ?? '',
+            );
+            if (cmpApMat != 0) return cmpApMat;
+            return a.nombre.compareTo(b.nombre);
+          });
     if (alumnos.isEmpty) {
       return const Center(child: Text('Sin alumnos inscritos'));
     }
@@ -87,7 +108,10 @@ class _AlumnosTab extends StatelessWidget {
           leading: CircleAvatar(
             child: Text(u.nombre.substring(0, 1).toUpperCase()),
           ),
-          title: Text(u.nombre),
+          title: Text(
+            '${u.apellidoPaterno ?? ''} ${u.apellidoMaterno ?? ''} ${u.nombre}'
+                .trim(),
+          ),
           subtitle: Text(u.email),
         );
       },

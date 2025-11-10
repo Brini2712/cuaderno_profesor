@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/cuaderno_provider.dart';
+import '../providers/notificaciones_provider.dart';
 import 'package:go_router/go_router.dart';
 import '../models/materia.dart';
 import '../models/evidencia.dart';
@@ -26,12 +27,22 @@ class _AlumnoHomeScreenState extends State<AlumnoHomeScreen> {
       final provider = Provider.of<CuadernoProvider>(context, listen: false);
       if (provider.usuario == null) {
         context.go('/login');
+        return;
       }
+
+      // Iniciar escucha de notificaciones
+      final notificacionesProvider = Provider.of<NotificacionesProvider>(
+        context,
+        listen: false,
+      );
+      notificacionesProvider.escucharNotificaciones(provider.usuario!.id);
     });
   }
 
   @override
   Widget build(BuildContext context) {
+    final isMobile = MediaQuery.of(context).size.width < 600;
+
     return Consumer<CuadernoProvider>(
       builder: (context, provider, child) {
         if (provider.usuario == null) {
@@ -40,6 +51,188 @@ class _AlumnoHomeScreenState extends State<AlumnoHomeScreen> {
           );
         }
 
+        // Layout móvil con BottomNavigationBar
+        if (isMobile) {
+          return Scaffold(
+            appBar: AppBar(
+              title: Text(_getTituloPorSeccion()),
+              actions: [
+                if (_selectedIndex == 1)
+                  IconButton(
+                    icon: const Icon(Icons.add_box_outlined),
+                    onPressed: () => _mostrarUnirseAClase(provider),
+                    tooltip: 'Unirse a clase',
+                  ),
+                // Icono de campanita con badge
+                Consumer<NotificacionesProvider>(
+                  builder: (context, notifProvider, _) {
+                    final noLeidas = notifProvider.notificacionesNoLeidas;
+                    return Stack(
+                      children: [
+                        IconButton(
+                          icon: const Icon(Icons.notifications_outlined),
+                          onPressed: () => context.push('/notificaciones'),
+                          tooltip: 'Notificaciones',
+                        ),
+                        if (noLeidas > 0)
+                          Positioned(
+                            right: 8,
+                            top: 8,
+                            child: Container(
+                              padding: const EdgeInsets.all(4),
+                              decoration: const BoxDecoration(
+                                color: Colors.red,
+                                shape: BoxShape.circle,
+                              ),
+                              constraints: const BoxConstraints(
+                                minWidth: 18,
+                                minHeight: 18,
+                              ),
+                              child: Text(
+                                noLeidas > 9 ? '9+' : noLeidas.toString(),
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                            ),
+                          ),
+                      ],
+                    );
+                  },
+                ),
+                PopupMenuButton<String>(
+                  onSelected: (value) {
+                    if (value == 'logout') {
+                      _cerrarSesion(provider);
+                    } else if (value == 'join') {
+                      _mostrarUnirseAClase(provider);
+                    } else if (value == 'profile') {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (ctx) => const PerfilScreen(),
+                        ),
+                      );
+                    } else if (value == 'settings') {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (ctx) => const ConfiguracionScreen(),
+                        ),
+                      );
+                    }
+                  },
+                  itemBuilder: (context) => [
+                    PopupMenuItem(
+                      value: 'profile',
+                      child: Row(
+                        children: const [
+                          Icon(Icons.person),
+                          SizedBox(width: 8),
+                          Text('Mi Perfil'),
+                        ],
+                      ),
+                    ),
+                    PopupMenuItem(
+                      value: 'settings',
+                      child: Row(
+                        children: const [
+                          Icon(Icons.settings),
+                          SizedBox(width: 8),
+                          Text('Configuración'),
+                        ],
+                      ),
+                    ),
+                    const PopupMenuDivider(),
+                    PopupMenuItem(
+                      value: 'join',
+                      child: Row(
+                        children: const [
+                          Icon(Icons.add_box),
+                          SizedBox(width: 8),
+                          Text('Unirse a Clase'),
+                        ],
+                      ),
+                    ),
+                    const PopupMenuDivider(),
+                    PopupMenuItem(
+                      value: 'logout',
+                      child: Row(
+                        children: const [
+                          Icon(Icons.logout),
+                          SizedBox(width: 8),
+                          Text('Cerrar Sesión'),
+                        ],
+                      ),
+                    ),
+                  ],
+                  child: Padding(
+                    padding: const EdgeInsets.all(8.0),
+                    child: CircleAvatar(
+                      backgroundColor: const Color(0xFF1976D2),
+                      radius: 16,
+                      child: Text(
+                        provider.usuario?.nombre
+                                .substring(0, 1)
+                                .toUpperCase() ??
+                            'A',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            body: IndexedStack(
+              index: _selectedIndex,
+              children: [
+                _buildInicioTab(provider),
+                _buildMisClasesTab(provider),
+                _buildCalendarioTab(provider),
+              ],
+            ),
+            bottomNavigationBar: BottomNavigationBar(
+              currentIndex: _selectedIndex,
+              onTap: (index) {
+                setState(() {
+                  _selectedIndex = index;
+                });
+              },
+              items: const [
+                BottomNavigationBarItem(
+                  icon: Icon(Icons.home_outlined),
+                  activeIcon: Icon(Icons.home),
+                  label: 'Inicio',
+                ),
+                BottomNavigationBarItem(
+                  icon: Icon(Icons.class_outlined),
+                  activeIcon: Icon(Icons.class_),
+                  label: 'Mis clases',
+                ),
+                BottomNavigationBarItem(
+                  icon: Icon(Icons.calendar_today_outlined),
+                  activeIcon: Icon(Icons.calendar_today),
+                  label: 'Calendario',
+                ),
+              ],
+            ),
+            floatingActionButton: _selectedIndex == 1
+                ? FloatingActionButton(
+                    onPressed: () => _mostrarUnirseAClase(provider),
+                    child: const Icon(Icons.add),
+                  )
+                : null,
+          );
+        }
+
+        // Layout desktop/tablet con NavigationRail
         return Scaffold(
           body: Row(
             children: [
@@ -72,85 +265,139 @@ class _AlumnoHomeScreenState extends State<AlumnoHomeScreen> {
                     alignment: Alignment.bottomCenter,
                     child: Padding(
                       padding: const EdgeInsets.only(bottom: 16),
-                      child: PopupMenuButton<String>(
-                        onSelected: (value) {
-                          if (value == 'logout') {
-                            _cerrarSesion(provider);
-                          } else if (value == 'join') {
-                            _mostrarUnirseAClase(provider);
-                          } else if (value == 'profile') {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (ctx) => const PerfilScreen(),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          // Icono de notificaciones
+                          Consumer<NotificacionesProvider>(
+                            builder: (context, notifProvider, _) {
+                              final noLeidas =
+                                  notifProvider.notificacionesNoLeidas;
+                              return Stack(
+                                clipBehavior: Clip.none,
+                                children: [
+                                  IconButton(
+                                    icon: const Icon(
+                                      Icons.notifications_outlined,
+                                    ),
+                                    onPressed: () =>
+                                        context.push('/notificaciones'),
+                                    tooltip: 'Notificaciones',
+                                  ),
+                                  if (noLeidas > 0)
+                                    Positioned(
+                                      right: 6,
+                                      top: 6,
+                                      child: Container(
+                                        padding: const EdgeInsets.all(4),
+                                        decoration: const BoxDecoration(
+                                          color: Colors.red,
+                                          shape: BoxShape.circle,
+                                        ),
+                                        constraints: const BoxConstraints(
+                                          minWidth: 18,
+                                          minHeight: 18,
+                                        ),
+                                        child: Text(
+                                          noLeidas > 9
+                                              ? '9+'
+                                              : noLeidas.toString(),
+                                          style: const TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 10,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                          textAlign: TextAlign.center,
+                                        ),
+                                      ),
+                                    ),
+                                ],
+                              );
+                            },
+                          ),
+                          const SizedBox(height: 8),
+                          PopupMenuButton<String>(
+                            onSelected: (value) {
+                              if (value == 'logout') {
+                                _cerrarSesion(provider);
+                              } else if (value == 'join') {
+                                _mostrarUnirseAClase(provider);
+                              } else if (value == 'profile') {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (ctx) => const PerfilScreen(),
+                                  ),
+                                );
+                              } else if (value == 'settings') {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (ctx) =>
+                                        const ConfiguracionScreen(),
+                                  ),
+                                );
+                              }
+                            },
+                            itemBuilder: (context) => [
+                              PopupMenuItem(
+                                value: 'profile',
+                                child: Row(
+                                  children: const [
+                                    Icon(Icons.person),
+                                    SizedBox(width: 8),
+                                    Text('Mi Perfil'),
+                                  ],
+                                ),
                               ),
-                            );
-                          } else if (value == 'settings') {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (ctx) => const ConfiguracionScreen(),
+                              PopupMenuItem(
+                                value: 'settings',
+                                child: Row(
+                                  children: const [
+                                    Icon(Icons.settings),
+                                    SizedBox(width: 8),
+                                    Text('Configuración'),
+                                  ],
+                                ),
                               ),
-                            );
-                          }
-                        },
-                        itemBuilder: (context) => [
-                          PopupMenuItem(
-                            value: 'profile',
-                            child: Row(
-                              children: const [
-                                Icon(Icons.person),
-                                SizedBox(width: 8),
-                                Text('Mi Perfil'),
-                              ],
-                            ),
-                          ),
-                          PopupMenuItem(
-                            value: 'settings',
-                            child: Row(
-                              children: const [
-                                Icon(Icons.settings),
-                                SizedBox(width: 8),
-                                Text('Configuración'),
-                              ],
-                            ),
-                          ),
-                          const PopupMenuDivider(),
-                          PopupMenuItem(
-                            value: 'join',
-                            child: Row(
-                              children: const [
-                                Icon(Icons.add_box),
-                                SizedBox(width: 8),
-                                Text('Unirse a Clase'),
-                              ],
-                            ),
-                          ),
-                          const PopupMenuDivider(),
-                          PopupMenuItem(
-                            value: 'logout',
-                            child: Row(
-                              children: const [
-                                Icon(Icons.logout),
-                                SizedBox(width: 8),
-                                Text('Cerrar Sesión'),
-                              ],
+                              const PopupMenuDivider(),
+                              PopupMenuItem(
+                                value: 'join',
+                                child: Row(
+                                  children: const [
+                                    Icon(Icons.add_box),
+                                    SizedBox(width: 8),
+                                    Text('Unirse a Clase'),
+                                  ],
+                                ),
+                              ),
+                              const PopupMenuDivider(),
+                              PopupMenuItem(
+                                value: 'logout',
+                                child: Row(
+                                  children: const [
+                                    Icon(Icons.logout),
+                                    SizedBox(width: 8),
+                                    Text('Cerrar Sesión'),
+                                  ],
+                                ),
+                              ),
+                            ],
+                            child: CircleAvatar(
+                              backgroundColor: const Color(0xFF1976D2),
+                              child: Text(
+                                provider.usuario?.nombre
+                                        .substring(0, 1)
+                                        .toUpperCase() ??
+                                    'A',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
                             ),
                           ),
                         ],
-                        child: CircleAvatar(
-                          backgroundColor: const Color(0xFF1976D2),
-                          child: Text(
-                            provider.usuario?.nombre
-                                    .substring(0, 1)
-                                    .toUpperCase() ??
-                                'A',
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
                       ),
                     ),
                   ),
@@ -252,28 +499,33 @@ class _AlumnoHomeScreenState extends State<AlumnoHomeScreen> {
   }
 
   Widget _buildInicioTab(CuadernoProvider provider) {
+    final isMobile = MediaQuery.of(context).size.width < 600;
+
     return RefreshIndicator(
       onRefresh: () => provider.cargarDatos(),
       child: provider.materias.isEmpty
           ? _buildEmptyState(provider)
           : ListView(
-              padding: const EdgeInsets.all(24),
+              padding: EdgeInsets.all(isMobile ? 12 : 24),
               children: [
                 Text(
                   '¡Hola, ${provider.usuario?.nombre ?? "Alumno"}!',
-                  style: const TextStyle(
-                    fontSize: 32,
+                  style: TextStyle(
+                    fontSize: isMobile ? 24 : 32,
                     fontWeight: FontWeight.w400,
                   ),
                 ),
-                const SizedBox(height: 24),
+                SizedBox(height: isMobile ? 16 : 24),
                 _buildResumenGeneral(provider),
-                const SizedBox(height: 32),
-                const Text(
+                SizedBox(height: isMobile ? 20 : 32),
+                Text(
                   'Mis clases',
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.w500),
+                  style: TextStyle(
+                    fontSize: isMobile ? 18 : 20,
+                    fontWeight: FontWeight.w500,
+                  ),
                 ),
-                const SizedBox(height: 16),
+                SizedBox(height: isMobile ? 12 : 16),
                 ...provider.materias.map(
                   (materia) => _buildMateriaCard(materia, provider),
                 ),
@@ -321,9 +573,12 @@ class _AlumnoHomeScreenState extends State<AlumnoHomeScreen> {
     required String value,
     required Color color,
   }) {
+    final isMobile = MediaQuery.of(context).size.width < 600;
+    final screenWidth = MediaQuery.of(context).size.width;
+
     return Container(
-      width: 180,
-      padding: const EdgeInsets.all(20),
+      width: isMobile ? (screenWidth - 40) / 2 : 180,
+      padding: EdgeInsets.all(isMobile ? 12 : 20),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
@@ -332,31 +587,42 @@ class _AlumnoHomeScreenState extends State<AlumnoHomeScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, color: color, size: 28),
-          const SizedBox(height: 12),
+          Icon(icon, color: color, size: isMobile ? 24 : 28),
+          SizedBox(height: isMobile ? 8 : 12),
           Text(
             value,
-            style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
+            style: TextStyle(
+              fontSize: isMobile ? 20 : 28,
+              fontWeight: FontWeight.bold,
+            ),
           ),
-          Text(title, style: TextStyle(fontSize: 14, color: Colors.grey[600])),
+          Text(
+            title,
+            style: TextStyle(
+              fontSize: isMobile ? 12 : 14,
+              color: Colors.grey[600],
+            ),
+          ),
         ],
       ),
     );
   }
 
   Widget _buildMateriaCard(Materia materia, CuadernoProvider provider) {
+    final isMobile = MediaQuery.of(context).size.width < 600;
+
     return Card(
-      margin: const EdgeInsets.only(bottom: 16),
+      margin: EdgeInsets.only(bottom: isMobile ? 8 : 16),
       child: InkWell(
         borderRadius: BorderRadius.circular(12),
         onTap: () => _navegarADetalleMateria(materia.id),
         child: Padding(
-          padding: const EdgeInsets.all(16),
+          padding: EdgeInsets.all(isMobile ? 12 : 16),
           child: Row(
             children: [
               Container(
                 width: 4,
-                height: 50,
+                height: isMobile ? 40 : 50,
                 decoration: BoxDecoration(
                   color: Color(
                     int.parse(materia.color.replaceAll('#', '0xFF')),
@@ -364,27 +630,32 @@ class _AlumnoHomeScreenState extends State<AlumnoHomeScreen> {
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
-              const SizedBox(width: 16),
+              SizedBox(width: isMobile ? 12 : 16),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       materia.nombre,
-                      style: const TextStyle(
-                        fontSize: 18,
+                      style: TextStyle(
+                        fontSize: isMobile ? 16 : 18,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
                     const SizedBox(height: 4),
                     Text(
                       materia.descripcion,
-                      style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+                      maxLines: isMobile ? 1 : 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: isMobile ? 12 : 14,
+                        color: Colors.grey[600],
+                      ),
                     ),
                   ],
                 ),
               ),
-              const Icon(Icons.arrow_forward_ios, size: 16),
+              Icon(Icons.arrow_forward_ios, size: isMobile ? 14 : 16),
             ],
           ),
         ),
@@ -639,28 +910,36 @@ class _AlumnoHomeScreenState extends State<AlumnoHomeScreen> {
   void _mostrarUnirseAClase(CuadernoProvider provider) {
     final codigoController = TextEditingController();
     final parentContext = context; // Contexto del Scaffold
+    final isMobile = MediaQuery.of(context).size.width < 600;
 
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Unirse a Clase'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Text(
-              'Ingresa el código de la clase proporcionado por tu profesor:',
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: codigoController,
-              decoration: const InputDecoration(
-                labelText: 'Código de clase',
-                hintText: 'Ej: ABC123',
-                border: OutlineInputBorder(),
+        title: Text(
+          'Unirse a Clase',
+          style: TextStyle(fontSize: isMobile ? 18 : 20),
+        ),
+        contentPadding: EdgeInsets.all(isMobile ? 16 : 24),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'Ingresa el código de la clase proporcionado por tu profesor:',
+                style: TextStyle(fontSize: isMobile ? 14 : 16),
               ),
-              textCapitalization: TextCapitalization.characters,
-            ),
-          ],
+              SizedBox(height: isMobile ? 12 : 16),
+              TextField(
+                controller: codigoController,
+                decoration: const InputDecoration(
+                  labelText: 'Código de clase',
+                  hintText: 'Ej: ABC123',
+                  border: OutlineInputBorder(),
+                ),
+                textCapitalization: TextCapitalization.characters,
+              ),
+            ],
+          ),
         ),
         actions: [
           TextButton(

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/cuaderno_provider.dart';
+import '../providers/notificaciones_provider.dart';
 import '../models/materia.dart';
 import '../widgets/materia_card.dart';
 import '../widgets/crear_materia_dialog.dart';
@@ -30,7 +31,15 @@ class _ProfesorHomeScreenState extends State<ProfesorHomeScreen> {
       final provider = Provider.of<CuadernoProvider>(context, listen: false);
       if (provider.usuario == null) {
         context.go('/login');
+        return;
       }
+
+      // Iniciar escucha de notificaciones
+      final notificacionesProvider = Provider.of<NotificacionesProvider>(
+        context,
+        listen: false,
+      );
+      notificacionesProvider.escucharNotificaciones(provider.usuario!.id);
     });
   }
 
@@ -80,6 +89,54 @@ class _ProfesorHomeScreenState extends State<ProfesorHomeScreen> {
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
+                          // Icono de notificaciones con badge
+                          Consumer<NotificacionesProvider>(
+                            builder: (context, notifProvider, _) {
+                              final noLeidas =
+                                  notifProvider.notificacionesNoLeidas;
+                              return Stack(
+                                clipBehavior: Clip.none,
+                                children: [
+                                  IconButton(
+                                    icon: const Icon(
+                                      Icons.notifications_outlined,
+                                    ),
+                                    onPressed: () =>
+                                        context.push('/notificaciones'),
+                                    tooltip: 'Notificaciones',
+                                  ),
+                                  if (noLeidas > 0)
+                                    Positioned(
+                                      right: 6,
+                                      top: 6,
+                                      child: Container(
+                                        padding: const EdgeInsets.all(4),
+                                        decoration: const BoxDecoration(
+                                          color: Colors.red,
+                                          shape: BoxShape.circle,
+                                        ),
+                                        constraints: const BoxConstraints(
+                                          minWidth: 18,
+                                          minHeight: 18,
+                                        ),
+                                        child: Text(
+                                          noLeidas > 9
+                                              ? '9+'
+                                              : noLeidas.toString(),
+                                          style: const TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 10,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                          textAlign: TextAlign.center,
+                                        ),
+                                      ),
+                                    ),
+                                ],
+                              );
+                            },
+                          ),
+                          const SizedBox(height: 8),
                           IconButton(
                             icon: const Icon(Icons.settings_outlined),
                             onPressed: () {
@@ -737,6 +794,7 @@ class _ProfesorHomeScreenState extends State<ProfesorHomeScreen> {
             nombre: m.nombre,
             descripcion: m.descripcion,
             color: m.color,
+            grupo: m.grupo,
           );
           final ok = await provider.actualizarMateria(editado);
           if (!mounted) return;

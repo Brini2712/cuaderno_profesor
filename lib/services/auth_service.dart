@@ -17,6 +17,8 @@ class AuthService {
     required String email,
     required String password,
     required String nombre,
+    String? apellidoPaterno,
+    String? apellidoMaterno,
     required TipoUsuario tipo,
   }) async {
     try {
@@ -31,6 +33,8 @@ class AuthService {
         Usuario nuevoUsuario = Usuario(
           id: user.uid,
           nombre: nombre,
+          apellidoPaterno: apellidoPaterno,
+          apellidoMaterno: apellidoMaterno,
           email: email,
           tipo: tipo,
           fechaCreacion: DateTime.now(),

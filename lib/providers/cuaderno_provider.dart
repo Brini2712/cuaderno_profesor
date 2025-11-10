@@ -69,6 +69,8 @@ class CuadernoProvider extends ChangeNotifier {
     required String email,
     required String password,
     required String nombre,
+    String? apellidoPaterno,
+    String? apellidoMaterno,
     required TipoUsuario tipo,
   }) async {
     _setLoading(true);
@@ -77,6 +79,8 @@ class CuadernoProvider extends ChangeNotifier {
         email: email,
         password: password,
         nombre: nombre,
+        apellidoPaterno: apellidoPaterno,
+        apellidoMaterno: apellidoMaterno,
         tipo: tipo,
       );
       if (usuario != null) {
@@ -152,6 +156,7 @@ class CuadernoProvider extends ChangeNotifier {
     _materias = snapshot.docs
         .map((doc) => Materia.fromMap(doc.data() as Map<String, dynamic>))
         .toList();
+    _ordenarColecciones();
     _reiniciarSubsColecciones();
   }
 
@@ -166,6 +171,7 @@ class CuadernoProvider extends ChangeNotifier {
     _materias = snapshot.docs
         .map((doc) => Materia.fromMap(doc.data() as Map<String, dynamic>))
         .toList();
+    _ordenarColecciones();
     _reiniciarSubsColecciones();
   }
 
@@ -178,6 +184,7 @@ class CuadernoProvider extends ChangeNotifier {
 
       await _firestore.collection('materias').doc(id).set(nuevaMateria.toMap());
       _materias.add(nuevaMateria);
+      _ordenarColecciones();
       notifyListeners();
     } catch (e) {
       print('Error agregando materia: $e');
@@ -191,6 +198,7 @@ class CuadernoProvider extends ChangeNotifier {
       final idx = _materias.indexWhere((x) => x.id == m.id);
       if (idx != -1) {
         _materias[idx] = m;
+        _ordenarColecciones();
         notifyListeners();
       }
       return true;
@@ -210,6 +218,7 @@ class CuadernoProvider extends ChangeNotifier {
         await _firestore.collection('materias').doc(materiaId).delete();
       }
       _materias.removeWhere((m) => m.id == materiaId);
+      _ordenarColecciones();
       notifyListeners();
       return true;
     } catch (e) {
@@ -227,6 +236,7 @@ class CuadernoProvider extends ChangeNotifier {
       final idx = _materias.indexWhere((m) => m.id == materiaId);
       if (idx != -1) {
         _materias[idx] = _materias[idx].copyWith(codigoAcceso: nuevo);
+        _ordenarColecciones();
         notifyListeners();
       }
       return nuevo;
@@ -262,6 +272,7 @@ class CuadernoProvider extends ChangeNotifier {
       _alumnos = snapshot.docs
           .map((doc) => Usuario.fromMap(doc.data() as Map<String, dynamic>))
           .toList();
+      _ordenarColecciones();
     }
   }
 
@@ -337,6 +348,7 @@ class CuadernoProvider extends ChangeNotifier {
     _asistencias = snapshot.docs
         .map((d) => RegistroAsistencia.fromMap(d.data()))
         .toList();
+    _ordenarColecciones();
   }
 
   Future<void> registrarAsistencia(RegistroAsistencia asistencia) async {
@@ -448,6 +460,7 @@ class CuadernoProvider extends ChangeNotifier {
     _evidencias = snapshot.docs
         .map((doc) => Evidencia.fromMap(doc.data() as Map<String, dynamic>))
         .toList();
+    _ordenarColecciones();
   }
 
   Future<void> agregarEvidencia(Evidencia evidencia) async {
@@ -475,6 +488,7 @@ class CuadernoProvider extends ChangeNotifier {
 
       await batch.commit();
       _evidencias.addAll(nuevasEvidencias);
+      _ordenarColecciones();
       notifyListeners();
     } catch (e) {
       print('Error agregando evidencia: $e');
@@ -491,6 +505,7 @@ class CuadernoProvider extends ChangeNotifier {
       final idx = _evidencias.indexWhere((e) => e.id == evidencia.id);
       if (idx != -1) {
         _evidencias[idx] = evidencia;
+        _ordenarColecciones();
         notifyListeners();
       }
       return true;
@@ -504,6 +519,7 @@ class CuadernoProvider extends ChangeNotifier {
     try {
       await _firestore.collection('evidencias').doc(evidenciaId).delete();
       _evidencias.removeWhere((e) => e.id == evidenciaId);
+      _ordenarColecciones();
       notifyListeners();
       return true;
     } catch (e) {
@@ -524,6 +540,7 @@ class CuadernoProvider extends ChangeNotifier {
       final idx = _evidencias.indexWhere((e) => e.id == evidenciaId);
       if (idx != -1) {
         _evidencias[idx] = _evidencias[idx].copyWith(estado: nuevoEstado);
+        _ordenarColecciones();
         notifyListeners();
       }
       return true;
@@ -715,7 +732,7 @@ class CuadernoProvider extends ChangeNotifier {
       estadisticas.add(
         EstadisticaAlumno(
           alumnoId: alumnoId,
-          alumnoNombre: alumno.nombre,
+          alumnoNombre: alumno.nombreCompleto,
           porcentajeAsistencia: porcentajeAsist,
           porcentajeEvidencias: porcentajeEvid,
           evaluacionesReprobadas: evaluacionesReprobadas,
@@ -763,6 +780,7 @@ class CuadernoProvider extends ChangeNotifier {
             _materias = snapshot.docs
                 .map((d) => Materia.fromMap(d.data()))
                 .toList();
+            _ordenarColecciones();
             _reiniciarSubsColecciones();
             notifyListeners();
           });
@@ -775,6 +793,7 @@ class CuadernoProvider extends ChangeNotifier {
             _materias = snapshot.docs
                 .map((d) => Materia.fromMap(d.data()))
                 .toList();
+            _ordenarColecciones();
             _reiniciarSubsColecciones();
             notifyListeners();
           });
@@ -797,6 +816,7 @@ class CuadernoProvider extends ChangeNotifier {
             _asistencias = snapshot.docs
                 .map((d) => RegistroAsistencia.fromMap(d.data()))
                 .toList();
+            _ordenarColecciones();
             notifyListeners();
           });
       _evidenciasSub = _firestore
@@ -807,6 +827,7 @@ class CuadernoProvider extends ChangeNotifier {
             _evidencias = snapshot.docs
                 .map((d) => Evidencia.fromMap(d.data()))
                 .toList();
+            _ordenarColecciones();
             notifyListeners();
           });
       _calificacionesSub = _firestore
@@ -817,6 +838,7 @@ class CuadernoProvider extends ChangeNotifier {
             _calificaciones = snapshot.docs
                 .map((d) => Calificacion.fromMap(d.data()))
                 .toList();
+            _ordenarColecciones();
             notifyListeners();
           });
     }
@@ -862,5 +884,39 @@ class CuadernoProvider extends ChangeNotifier {
   void dispose() {
     _cancelSubscriptions();
     super.dispose();
+  }
+
+  // ================= ORDENAMIENTO =================
+  String _normalize(String input) {
+    final lower = input.toLowerCase();
+    return lower
+        .replaceAll(RegExp(r'[áàä]'), 'a')
+        .replaceAll(RegExp(r'[éèë]'), 'e')
+        .replaceAll(RegExp(r'[íìï]'), 'i')
+        .replaceAll(RegExp(r'[óòö]'), 'o')
+        .replaceAll(RegExp(r'[úùü]'), 'u')
+        .replaceAll(RegExp(r'ñ'), 'n');
+  }
+
+  void _ordenarColecciones() {
+    _materias.sort(
+      (a, b) => _normalize(a.nombre).compareTo(_normalize(b.nombre)),
+    );
+    _alumnos.sort((a, b) {
+      int cmpApPat = _normalize(
+        a.apellidoPaterno ?? '',
+      ).compareTo(_normalize(b.apellidoPaterno ?? ''));
+      if (cmpApPat != 0) return cmpApPat;
+      int cmpApMat = _normalize(
+        a.apellidoMaterno ?? '',
+      ).compareTo(_normalize(b.apellidoMaterno ?? ''));
+      if (cmpApMat != 0) return cmpApMat;
+      return _normalize(a.nombre).compareTo(_normalize(b.nombre));
+    });
+    _evidencias.sort((a, b) {
+      final byTitulo = _normalize(a.titulo).compareTo(_normalize(b.titulo));
+      if (byTitulo != 0) return byTitulo;
+      return a.fechaEntrega.compareTo(b.fechaEntrega);
+    });
   }
 }

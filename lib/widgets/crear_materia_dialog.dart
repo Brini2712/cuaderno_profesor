@@ -14,6 +14,7 @@ class _CrearMateriaDialogState extends State<CrearMateriaDialog> {
   final _formKey = GlobalKey<FormState>();
   final _nombreController = TextEditingController();
   final _descripcionController = TextEditingController();
+  final _grupoController = TextEditingController();
 
   String _colorSeleccionado = '#2196F3';
 
@@ -34,6 +35,7 @@ class _CrearMateriaDialogState extends State<CrearMateriaDialog> {
   void dispose() {
     _nombreController.dispose();
     _descripcionController.dispose();
+    _grupoController.dispose();
     super.dispose();
   }
 
@@ -58,6 +60,15 @@ class _CrearMateriaDialogState extends State<CrearMateriaDialog> {
                 }
                 return null;
               },
+            ),
+            const SizedBox(height: 16),
+            TextFormField(
+              controller: _grupoController,
+              decoration: const InputDecoration(
+                labelText: 'Número de grupo (opcional)',
+                hintText: 'Ej: 501',
+              ),
+              keyboardType: TextInputType.number,
             ),
             const SizedBox(height: 16),
             TextFormField(
@@ -135,6 +146,9 @@ class _CrearMateriaDialogState extends State<CrearMateriaDialog> {
         profesorId: '', // Se asignará en el provider
         fechaCreacion: DateTime.now(),
         codigoAcceso: codigoAcceso,
+        grupo: _grupoController.text.trim().isEmpty
+            ? null
+            : _grupoController.text.trim(),
       );
 
       widget.onCrear(materia);

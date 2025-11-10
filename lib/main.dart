@@ -4,9 +4,11 @@ import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 import 'firebase_options.dart';
 import 'providers/cuaderno_provider.dart';
+import 'providers/notificaciones_provider.dart';
 import 'screens/login_screen.dart';
 import 'screens/profesor_home_screen.dart';
 import 'screens/alumno_home_screen.dart';
+import 'screens/notificaciones_screen.dart';
 // Import condicional para evitar 'dart:html' en plataformas móviles/desktop
 import 'screens/web/reportes_web_screen_stub.dart'
     if (dart.library.html) 'screens/web/reportes_web_screen.dart';
@@ -23,7 +25,10 @@ class CuadernoProfesorApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MultiProvider(
-      providers: [ChangeNotifierProvider(create: (_) => CuadernoProvider())],
+      providers: [
+        ChangeNotifierProvider(create: (_) => CuadernoProvider()),
+        ChangeNotifierProvider(create: (_) => NotificacionesProvider()),
+      ],
       child: MaterialApp.router(
         title: 'Cuaderno Profesor',
         debugShowCheckedModeBanner: false,
@@ -74,6 +79,10 @@ final GoRouter _router = GoRouter(
     GoRoute(
       path: '/alumno',
       builder: (context, state) => const AlumnoHomeScreen(),
+    ),
+    GoRoute(
+      path: '/notificaciones',
+      builder: (context, state) => const NotificacionesScreen(),
     ),
     GoRoute(
       path: '/reportes',

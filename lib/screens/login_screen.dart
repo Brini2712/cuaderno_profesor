@@ -15,6 +15,8 @@ class _LoginScreenState extends State<LoginScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _nombreController = TextEditingController();
+  final _apellidoPaternoController = TextEditingController();
+  final _apellidoMaternoController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
   bool _isLogin = true;
   bool _obscurePassword = true;
@@ -25,6 +27,8 @@ class _LoginScreenState extends State<LoginScreen> {
     _emailController.dispose();
     _passwordController.dispose();
     _nombreController.dispose();
+    _apellidoPaternoController.dispose();
+    _apellidoMaternoController.dispose();
     super.dispose();
   }
 
@@ -94,21 +98,73 @@ class _LoginScreenState extends State<LoginScreen> {
 
                         // Campos del formulario
                         if (!_isLogin) ...[
-                          TextFormField(
-                            controller: _nombreController,
-                            decoration: InputDecoration(
-                              labelText: 'Nombre completo',
-                              prefixIcon: const Icon(Icons.person),
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: TextFormField(
+                                  controller: _nombreController,
+                                  decoration: InputDecoration(
+                                    labelText: 'Nombre(s)',
+                                    prefixIcon: const Icon(Icons.person),
+                                    border: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                  ),
+                                  validator: (value) {
+                                    if (value == null || value.isEmpty) {
+                                      return 'Ingresa tu(s) nombre(s)';
+                                    }
+                                    return null;
+                                  },
+                                ),
                               ),
-                            ),
-                            validator: (value) {
-                              if (value == null || value.isEmpty) {
-                                return 'Por favor ingresa tu nombre';
-                              }
-                              return null;
-                            },
+                            ],
+                          ),
+                          const SizedBox(height: 16),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: TextFormField(
+                                  controller: _apellidoPaternoController,
+                                  decoration: InputDecoration(
+                                    labelText: 'Apellido paterno',
+                                    prefixIcon: const Icon(
+                                      Icons.badge_outlined,
+                                    ),
+                                    border: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                  ),
+                                  validator: (value) {
+                                    if (value == null || value.isEmpty) {
+                                      return 'Ingresa el apellido paterno';
+                                    }
+                                    return null;
+                                  },
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: TextFormField(
+                                  controller: _apellidoMaternoController,
+                                  decoration: InputDecoration(
+                                    labelText: 'Apellido materno',
+                                    prefixIcon: const Icon(
+                                      Icons.badge_outlined,
+                                    ),
+                                    border: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                  ),
+                                  validator: (value) {
+                                    if (value == null || value.isEmpty) {
+                                      return 'Ingresa el apellido materno';
+                                    }
+                                    return null;
+                                  },
+                                ),
+                              ),
+                            ],
                           ),
                           const SizedBox(height: 16),
 
@@ -310,6 +366,8 @@ class _LoginScreenState extends State<LoginScreen> {
           email: _emailController.text.trim(),
           password: _passwordController.text,
           nombre: _nombreController.text.trim(),
+          apellidoPaterno: _apellidoPaternoController.text.trim(),
+          apellidoMaterno: _apellidoMaternoController.text.trim(),
           tipo: _tipoUsuario,
         );
       }

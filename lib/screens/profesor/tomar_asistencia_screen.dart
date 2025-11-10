@@ -31,9 +31,21 @@ class _TomarAsistenciaScreenState extends State<TomarAsistenciaScreen> {
   @override
   Widget build(BuildContext context) {
     final provider = context.watch<CuadernoProvider>();
-    final alumnos = provider.alumnos
-        .where((a) => widget.materia.alumnosIds.contains(a.id))
-        .toList();
+    final alumnos =
+        provider.alumnos
+            .where((a) => widget.materia.alumnosIds.contains(a.id))
+            .toList()
+          ..sort((a, b) {
+            int cmpApPat = (a.apellidoPaterno ?? '').compareTo(
+              b.apellidoPaterno ?? '',
+            );
+            if (cmpApPat != 0) return cmpApPat;
+            int cmpApMat = (a.apellidoMaterno ?? '').compareTo(
+              b.apellidoMaterno ?? '',
+            );
+            if (cmpApMat != 0) return cmpApMat;
+            return a.nombre.compareTo(b.nombre);
+          });
 
     return Scaffold(
       appBar: AppBar(
@@ -89,7 +101,7 @@ class _TomarAsistenciaScreenState extends State<TomarAsistenciaScreen> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                alumno.nombre,
+                                alumno.nombreCompleto,
                                 style: const TextStyle(
                                   fontWeight: FontWeight.bold,
                                 ),

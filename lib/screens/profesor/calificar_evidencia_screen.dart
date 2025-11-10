@@ -46,7 +46,7 @@ class _CalificarEvidenciaScreenState extends State<CalificarEvidenciaScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text('Calificar - ${alumno.nombre}'),
+        title: Text('Calificar - ${alumno.nombreCompleto}'),
         actions: [
           if (widget.evidencia.estado == EstadoEvidencia.calificado)
             TextButton(
@@ -82,7 +82,7 @@ class _CalificarEvidenciaScreenState extends State<CalificarEvidenciaScreen> {
                       radius: 24,
                       backgroundColor: Theme.of(context).primaryColor,
                       child: Text(
-                        alumno.nombre.substring(0, 1).toUpperCase(),
+                        alumno.nombreCompleto.substring(0, 1).toUpperCase(),
                         style: const TextStyle(
                           color: Colors.white,
                           fontSize: 20,
@@ -96,7 +96,7 @@ class _CalificarEvidenciaScreenState extends State<CalificarEvidenciaScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            alumno.nombre,
+                            alumno.nombreCompleto,
                             style: const TextStyle(
                               fontSize: 20,
                               fontWeight: FontWeight.bold,

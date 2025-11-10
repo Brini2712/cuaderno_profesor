@@ -450,7 +450,8 @@ class _FormularioEvidenciaScreenState extends State<FormularioEvidenciaScreen> {
   String? _alumnoSeleccionado;
   TipoEvidencia _tipo = TipoEvidencia.actividad;
   EstadoEvidencia _estado = EstadoEvidencia.asignado;
-  DateTime _fechaEntrega = DateTime.now();
+  // Fecha por defecto: una semana a partir de hoy (editable por el usuario)
+  DateTime _fechaEntrega = DateTime.now().add(const Duration(days: 7));
   bool _guardando = false;
 
   @override
@@ -495,18 +496,49 @@ class _FormularioEvidenciaScreenState extends State<FormularioEvidenciaScreen> {
           widget.evidencia == null ? 'Nueva evidencia' : 'Editar evidencia',
         ),
         actions: [
-          TextButton(
-            onPressed: _guardando ? null : _guardar,
-            child: _guardando
-                ? const SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : Text(
-                    widget.evidencia == null ? 'Crear' : 'Actualizar',
-                    style: const TextStyle(fontWeight: FontWeight.bold),
-                  ),
+          Padding(
+            padding: const EdgeInsets.only(right: 8.0),
+            child: ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.white.withOpacity(0.15),
+                foregroundColor: Colors.white,
+                elevation: 0,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 10,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(20),
+                ),
+              ),
+              onPressed: _guardando ? null : _guardar,
+              child: _guardando
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
+                    )
+                  : Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          widget.evidencia == null ? Icons.add : Icons.save,
+                          size: 18,
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          widget.evidencia == null ? 'Crear' : 'Actualizar',
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                      ],
+                    ),
+            ),
           ),
           const SizedBox(width: 8),
         ],

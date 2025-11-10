@@ -7,6 +7,8 @@ class Materia {
   final List<String> alumnosIds;
   final DateTime fechaCreacion;
   final String? codigoAcceso;
+  // Número o identificador del grupo (ej: "501", "A", "2B"). Opcional.
+  final String? grupo;
   // Número esperado de evidencias por parcial/periodo para esta materia
   final int totalEvidenciasEsperadas;
   // Pesos de evaluación (por defecto: Examen 40%, Portafolio 40%, Actividad 20%)
@@ -23,6 +25,7 @@ class Materia {
     this.alumnosIds = const [],
     required this.fechaCreacion,
     this.codigoAcceso,
+    this.grupo,
     this.totalEvidenciasEsperadas = 10,
     this.pesoExamen = 0.4,
     this.pesoPortafolio = 0.4,
@@ -39,6 +42,7 @@ class Materia {
       'alumnosIds': alumnosIds,
       'fechaCreacion': fechaCreacion.millisecondsSinceEpoch,
       'codigoAcceso': codigoAcceso,
+      'grupo': grupo,
       'totalEvidenciasEsperadas': totalEvidenciasEsperadas,
       'pesoExamen': pesoExamen,
       'pesoPortafolio': pesoPortafolio,
@@ -58,6 +62,7 @@ class Materia {
         map['fechaCreacion'] ?? 0,
       ),
       codigoAcceso: map['codigoAcceso'],
+      grupo: map['grupo'],
       totalEvidenciasEsperadas: (map['totalEvidenciasEsperadas'] ?? 10) is int
           ? (map['totalEvidenciasEsperadas'] ?? 10)
           : (map['totalEvidenciasEsperadas'] ?? 10).toInt(),
@@ -76,6 +81,7 @@ class Materia {
     List<String>? alumnosIds,
     DateTime? fechaCreacion,
     String? codigoAcceso,
+    String? grupo,
     int? totalEvidenciasEsperadas,
     double? pesoExamen,
     double? pesoPortafolio,
@@ -90,6 +96,7 @@ class Materia {
       alumnosIds: alumnosIds ?? this.alumnosIds,
       fechaCreacion: fechaCreacion ?? this.fechaCreacion,
       codigoAcceso: codigoAcceso ?? this.codigoAcceso,
+      grupo: grupo ?? this.grupo,
       totalEvidenciasEsperadas:
           totalEvidenciasEsperadas ?? this.totalEvidenciasEsperadas,
       pesoExamen: pesoExamen ?? this.pesoExamen,

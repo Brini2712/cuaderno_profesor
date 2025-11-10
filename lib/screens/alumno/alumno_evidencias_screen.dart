@@ -19,6 +19,8 @@ class _AlumnoEvidenciasScreenState extends State<AlumnoEvidenciasScreen> {
   @override
   Widget build(BuildContext context) {
     final provider = context.watch<CuadernoProvider>();
+    final isMobile = MediaQuery.of(context).size.width < 600;
+
     final misEvidencias = provider.evidencias
         .where(
           (e) =>
@@ -40,7 +42,12 @@ class _AlumnoEvidenciasScreenState extends State<AlumnoEvidenciasScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text('Mis Evidencias - ${widget.materia.nombre}'),
+        title: Text(
+          isMobile
+              ? widget.materia.nombre
+              : 'Mis Evidencias - ${widget.materia.nombre}',
+          style: TextStyle(fontSize: isMobile ? 16 : 20),
+        ),
         actions: [
           PopupMenuButton<String>(
             icon: const Icon(Icons.filter_list),
@@ -72,7 +79,7 @@ class _AlumnoEvidenciasScreenState extends State<AlumnoEvidenciasScreen> {
       body: Column(
         children: [
           Container(
-            padding: const EdgeInsets.all(16),
+            padding: EdgeInsets.all(isMobile ? 12 : 16),
             color: Colors.grey[100],
             child: Row(
               children: [
@@ -80,14 +87,14 @@ class _AlumnoEvidenciasScreenState extends State<AlumnoEvidenciasScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
+                      Text(
                         'Progreso de evidencias',
                         style: TextStyle(
                           fontWeight: FontWeight.bold,
-                          fontSize: 16,
+                          fontSize: isMobile ? 14 : 16,
                         ),
                       ),
-                      const SizedBox(height: 8),
+                      SizedBox(height: isMobile ? 6 : 8),
                       TweenAnimationBuilder<double>(
                         duration: const Duration(milliseconds: 600),
                         curve: Curves.easeOutCubic,
@@ -105,7 +112,10 @@ class _AlumnoEvidenciasScreenState extends State<AlumnoEvidenciasScreen> {
                       const SizedBox(height: 4),
                       Text(
                         '${misEvidencias.length} de $totalEsperadas (${porcentaje.toStringAsFixed(1)}%)',
-                        style: TextStyle(fontSize: 12, color: Colors.grey[700]),
+                        style: TextStyle(
+                          fontSize: isMobile ? 11 : 12,
+                          color: Colors.grey[700],
+                        ),
                       ),
                     ],
                   ),
@@ -135,7 +145,7 @@ class _AlumnoEvidenciasScreenState extends State<AlumnoEvidenciasScreen> {
                     ),
                   )
                 : ListView.builder(
-                    padding: const EdgeInsets.all(16),
+                    padding: EdgeInsets.all(isMobile ? 8 : 16),
                     itemCount: evidenciasFiltradas.length,
                     itemBuilder: (ctx, i) {
                       final ev = evidenciasFiltradas[i];
@@ -153,28 +163,47 @@ class _AlumnoEvidenciasScreenState extends State<AlumnoEvidenciasScreen> {
                           );
                         },
                         child: Card(
-                          margin: const EdgeInsets.only(bottom: 12),
+                          margin: EdgeInsets.only(bottom: isMobile ? 8 : 12),
                           child: ListTile(
+                            contentPadding: EdgeInsets.symmetric(
+                              horizontal: isMobile ? 12 : 16,
+                              vertical: isMobile ? 4 : 8,
+                            ),
                             leading: Hero(
                               tag: 'ev-${ev.id}',
                               child: CircleAvatar(
+                                radius: isMobile ? 20 : 24,
                                 backgroundColor: _colorPorTipo(ev.tipo),
                                 child: Icon(
                                   _iconoPorTipo(ev.tipo),
                                   color: Colors.white,
+                                  size: isMobile ? 18 : 24,
                                 ),
                               ),
                             ),
-                            title: Text(ev.titulo),
+                            title: Text(
+                              ev.titulo,
+                              style: TextStyle(
+                                fontSize: isMobile ? 14 : 16,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
                             subtitle: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text(ev.descripcion),
+                                Text(
+                                  ev.descripcion,
+                                  maxLines: isMobile ? 2 : 3,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    fontSize: isMobile ? 12 : 14,
+                                  ),
+                                ),
                                 const SizedBox(height: 4),
                                 Text(
                                   '${_labelTipo(ev.tipo)} • ${_labelEstado(ev.estado)}',
                                   style: TextStyle(
-                                    fontSize: 12,
+                                    fontSize: isMobile ? 11 : 12,
                                     color: Colors.grey[600],
                                   ),
                                 ),
