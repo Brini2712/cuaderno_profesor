@@ -420,12 +420,14 @@ class _ProfesorHomeScreenState extends State<ProfesorHomeScreen> {
                       child: Row(
                         children: [
                           if (isMobile)
-                            IconButton(
-                              icon: const Icon(Icons.menu),
-                              onPressed: () {
-                                Scaffold.of(context).openDrawer();
-                              },
-                              tooltip: 'Menú',
+                            Builder(
+                              builder: (ctx) => IconButton(
+                                icon: const Icon(Icons.menu),
+                                onPressed: () {
+                                  Scaffold.of(ctx).openDrawer();
+                                },
+                                tooltip: 'Menú',
+                              ),
                             ),
                           Text(
                             _getTituloPorSeccion(),
