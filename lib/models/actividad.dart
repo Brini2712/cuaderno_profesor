@@ -9,6 +9,8 @@ enum EstadoEvidencia {
   devuelto, // Devuelto para corrección
 }
 
+enum EvaluacionPeriodo { eval1, eval2, eval3, ordinario }
+
 class Evidencia {
   final String id;
   final String materiaId;
@@ -25,6 +27,7 @@ class Evidencia {
   final DateTime fechaRegistro;
   final String profesorId;
   final String? observaciones;
+  final EvaluacionPeriodo periodo; // New field for evaluation period
 
   // Campos para la entrega del alumno
   final DateTime? fechaEntregaAlumno;
@@ -58,6 +61,7 @@ class Evidencia {
     this.enlaceExterno,
     this.comentarioProfesor,
     this.fechaCalificacion,
+    this.periodo = EvaluacionPeriodo.eval1, // Default value for new field
   });
 
   Map<String, dynamic> toMap() {
@@ -83,6 +87,10 @@ class Evidencia {
       'enlaceExterno': enlaceExterno,
       'comentarioProfesor': comentarioProfesor,
       'fechaCalificacion': fechaCalificacion?.millisecondsSinceEpoch,
+      'periodo': periodo
+          .toString()
+          .split('.')
+          .last, // Include new field in toMap
     };
   }
 
@@ -128,6 +136,12 @@ class Evidencia {
       fechaCalificacion: map['fechaCalificacion'] != null
           ? DateTime.fromMillisecondsSinceEpoch(map['fechaCalificacion'])
           : null,
+      periodo: map['periodo'] != null
+          ? EvaluacionPeriodo.values.firstWhere(
+              (p) => p.toString().split('.').last == map['periodo'],
+              orElse: () => EvaluacionPeriodo.eval1,
+            )
+          : EvaluacionPeriodo.eval1, // Default value for new field
     );
   }
 
@@ -166,6 +180,7 @@ class Evidencia {
     String? enlaceExterno,
     String? comentarioProfesor,
     DateTime? fechaCalificacion,
+    EvaluacionPeriodo? periodo, // Include new field in copyWith
   }) {
     return Evidencia(
       id: id ?? this.id,
@@ -189,6 +204,7 @@ class Evidencia {
       enlaceExterno: enlaceExterno ?? this.enlaceExterno,
       comentarioProfesor: comentarioProfesor ?? this.comentarioProfesor,
       fechaCalificacion: fechaCalificacion ?? this.fechaCalificacion,
+      periodo: periodo ?? this.periodo, // Handle new field in copyWith
     );
   }
 

@@ -296,7 +296,7 @@ class _DetalleEvidenciaProfesorScreenState
                   ),
                 if (evidencia.calificacionNumerica != null)
                   Text(
-                    'Calificación: ${evidencia.calificacionNumerica!.toStringAsFixed(1)}/${evidencia.puntosTotales}',
+                    'Calificación: ${evidencia.calificacionNumerica!.toStringAsFixed(1)}',
                     style: const TextStyle(
                       fontWeight: FontWeight.bold,
                       color: Colors.green,
@@ -304,7 +304,7 @@ class _DetalleEvidenciaProfesorScreenState
                   )
                 else if (evidencia.calificacion != null)
                   Text(
-                    'Calificación: ${_letraCalif(evidencia.calificacion!)} (${evidencia.valorNumerico})/${evidencia.puntosTotales}',
+                    'Calificación: ${_letraCalif(evidencia.calificacion!)} (${evidencia.valorNumerico})',
                     style: const TextStyle(
                       fontWeight: FontWeight.bold,
                       color: Colors.green,

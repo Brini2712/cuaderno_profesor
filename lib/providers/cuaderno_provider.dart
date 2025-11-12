@@ -301,6 +301,8 @@ class CuadernoProvider extends ChangeNotifier {
 
       _materias.removeWhere((m) => m.id == materiaId);
       _ordenarColecciones();
+      // Recargar alumnos para reflejar los cambios (puede haber alumnos que ya no estén en ninguna materia)
+      await cargarAlumnos();
       notifyListeners();
       return true;
     } catch (e) {
@@ -355,6 +357,10 @@ class CuadernoProvider extends ChangeNotifier {
           .map((doc) => Usuario.fromMap(doc.data() as Map<String, dynamic>))
           .toList();
       _ordenarColecciones();
+    } else {
+      // Si no hay alumnos en ninguna materia, limpiar la lista
+      _alumnos = [];
+      notifyListeners();
     }
   }
 
@@ -409,7 +415,9 @@ class CuadernoProvider extends ChangeNotifier {
           ..remove(alumnoId);
         _materias[idx] = materia.copyWith(alumnosIds: nuevosAlumnos);
       }
-      _alumnos.removeWhere((a) => a.id == alumnoId);
+      // Recargar alumnos para reflejar correctamente los cambios
+      // (solo se debe remover si ya no está en ninguna materia)
+      await cargarAlumnos();
       _ordenarColecciones();
       notifyListeners();
       return true;
@@ -897,6 +905,7 @@ class CuadernoProvider extends ChangeNotifier {
       final batch = _firestore.batch();
       final nuevasEvidencias = <Evidencia>[];
 
+      final nuevasCalificaciones = <Calificacion>[];
       for (final alumnoId in materia.alumnosIds) {
         String id = _uuid.v4();
         Evidencia nuevaEvidencia = evidencia.copyWith(
@@ -920,11 +929,36 @@ class CuadernoProvider extends ChangeNotifier {
           materiaId: materia.id,
           evidenciaId: id,
         );
+
+        // Asegurar que exista un documento de calificación para este alumno/materia
+        final existeCalif = _calificaciones.any(
+          (c) => c.materiaId == materia.id && c.alumnoId == alumnoId,
+        );
+        if (!existeCalif) {
+          final calId = _uuid.v4();
+          final nuevaCal = Calificacion(
+            id: calId,
+            materiaId: materia.id,
+            alumnoId: alumnoId,
+            examen: null,
+            portafolioEvidencias: null,
+            actividadComplementaria: null,
+            fechaActualizacion: DateTime.now(),
+          );
+          batch.set(
+            _firestore.collection('calificaciones').doc(calId),
+            nuevaCal.toMap(),
+          );
+          nuevasCalificaciones.add(nuevaCal);
+        }
       }
 
       await batch.commit();
 
       _evidencias.addAll(nuevasEvidencias);
+      if (nuevasCalificaciones.isNotEmpty) {
+        _calificaciones.addAll(nuevasCalificaciones);
+      }
       _ordenarColecciones();
       notifyListeners();
     } catch (e) {
@@ -1054,7 +1088,7 @@ class CuadernoProvider extends ChangeNotifier {
           final String mensajeCalificacion;
           if (evidencia.calificacionNumerica != null) {
             mensajeCalificacion =
-                'Calificación: ${evidencia.calificacionNumerica}/${evidencia.puntosTotales}';
+                'Calificación: ${evidencia.calificacionNumerica}';
           } else if (evidencia.calificacion != null) {
             final letra = evidencia.calificacion.toString().split('.').last;
             final valor = evidencia.valorNumerico;
@@ -1228,8 +1262,8 @@ class CuadernoProvider extends ChangeNotifier {
         .where((a) => a.alumnoId == alumnoId && a.materiaId == materiaId)
         .toList();
 
-    // Si no hay asistencias registradas, el alumno está al 100% (sin datos = sin problemas)
-    if (asistenciasAlumno.isEmpty) return 100.0;
+    // Si no hay asistencias registradas, retornar 0% (sin datos = sin estadísticas)
+    if (asistenciasAlumno.isEmpty) return 0.0;
     return AnalyticsUtils.porcentajeAsistencia(asistenciasAlumno);
   }
 
@@ -1238,8 +1272,8 @@ class CuadernoProvider extends ChangeNotifier {
         .where((e) => e.alumnoId == alumnoId && e.materiaId == materiaId)
         .toList();
 
-    // Si no hay evidencias asignadas, el alumno está al 100%
-    if (evidenciasAlumno.isEmpty) return 100.0;
+    // Si no hay evidencias asignadas, retornar 0% (sin datos = sin estadísticas)
+    if (evidenciasAlumno.isEmpty) return 0.0;
 
     // Contar cuántas evidencias fueron REALMENTE asignadas a este alumno
     final totalAsignadas = evidenciasAlumno.length;
@@ -1255,7 +1289,90 @@ class CuadernoProvider extends ChangeNotifier {
     );
   }
 
+  // Calcular porcentaje de exámenes entregados
+  double calcularPorcentajeExamenes(String alumnoId, String materiaId) {
+    final examenesAlumno = _evidencias
+        .where(
+          (e) =>
+              e.alumnoId == alumnoId &&
+              e.materiaId == materiaId &&
+              e.tipo == TipoEvidencia.examen,
+        )
+        .toList();
+
+    if (examenesAlumno.isEmpty) return 0.0;
+
+    final totalAsignados = examenesAlumno.length;
+    final entregados = examenesAlumno
+        .where((e) => e.estado != EstadoEvidencia.asignado)
+        .length;
+
+    return AnalyticsUtils.porcentajeEvidencias(
+      entregadas: entregados,
+      esperadas: totalAsignados,
+    );
+  }
+
+  // Calcular porcentaje de portafolios entregados
+  double calcularPorcentajePortafolio(String alumnoId, String materiaId) {
+    final portafoliosAlumno = _evidencias
+        .where(
+          (e) =>
+              e.alumnoId == alumnoId &&
+              e.materiaId == materiaId &&
+              e.tipo == TipoEvidencia.portafolio,
+        )
+        .toList();
+
+    if (portafoliosAlumno.isEmpty) return 0.0;
+
+    final totalAsignados = portafoliosAlumno.length;
+    final entregados = portafoliosAlumno
+        .where((e) => e.estado != EstadoEvidencia.asignado)
+        .length;
+
+    return AnalyticsUtils.porcentajeEvidencias(
+      entregadas: entregados,
+      esperadas: totalAsignados,
+    );
+  }
+
+  // Calcular porcentaje de actividades entregadas
+  double calcularPorcentajeActividades(String alumnoId, String materiaId) {
+    final actividadesAlumno = _evidencias
+        .where(
+          (e) =>
+              e.alumnoId == alumnoId &&
+              e.materiaId == materiaId &&
+              e.tipo == TipoEvidencia.actividad,
+        )
+        .toList();
+
+    if (actividadesAlumno.isEmpty) return 0.0;
+
+    final totalAsignados = actividadesAlumno.length;
+    final entregados = actividadesAlumno
+        .where((e) => e.estado != EstadoEvidencia.asignado)
+        .length;
+
+    return AnalyticsUtils.porcentajeEvidencias(
+      entregadas: entregados,
+      esperadas: totalAsignados,
+    );
+  }
+
   bool puedeExentar(String alumnoId, String materiaId) {
+    // Verificar primero si hay datos suficientes
+    final tieneAsistencias = _asistencias.any(
+      (a) => a.alumnoId == alumnoId && a.materiaId == materiaId,
+    );
+    final tieneEvidencias = _evidencias.any(
+      (e) => e.alumnoId == alumnoId && e.materiaId == materiaId,
+    );
+
+    // No puede exentar si no hay datos
+    if (!tieneAsistencias && !tieneEvidencias) return false;
+
     double porcentajeAsistencia = calcularPorcentajeAsistencia(
       alumnoId,
       materiaId,
@@ -1271,6 +1388,17 @@ class CuadernoProvider extends ChangeNotifier {
   }
 
   bool tieneRiesgoReprobacion(String alumnoId, String materiaId) {
+    // Verificar primero si hay datos suficientes
+    final tieneAsistencias = _asistencias.any(
+      (a) => a.alumnoId == alumnoId && a.materiaId == materiaId,
+    );
+    final tieneEvidencias = _evidencias.any(
+      (e) => e.alumnoId == alumnoId && e.materiaId == materiaId,
+    );
+
+    // No está en riesgo si no hay datos para evaluar
+    if (!tieneAsistencias && !tieneEvidencias) return false;
+
     final porcentajeAsistencia = calcularPorcentajeAsistencia(
       alumnoId,
       materiaId,
@@ -1283,6 +1411,29 @@ class CuadernoProvider extends ChangeNotifier {
       porcentajeAsistencia: porcentajeAsistencia,
       porcentajeEvidencias: porcentajeEvidencias,
     );
+  }
+
+  double? calcularPorcentajePromedioEvaluaciones(
+    String alumnoId,
+    String materiaId,
+  ) {
+    final evidenciasCalificadas = _evidencias
+        .where(
+          (e) =>
+              e.alumnoId == alumnoId &&
+              e.materiaId == materiaId &&
+              e.estado == EstadoEvidencia.calificado,
+        )
+        .toList();
+
+    if (evidenciasCalificadas.isEmpty) return null;
+
+    final sumaTodas = evidenciasCalificadas.fold<double>(
+      0.0,
+      (prev, ev) => prev + ev.valorNumerico,
+    );
+    final promedioGeneral = sumaTodas / evidenciasCalificadas.length;
+    return promedioGeneral * 10.0; // Convertir a porcentaje (0-100)
   }
 
   // ============= REPORTES WEB =============
@@ -1339,9 +1490,9 @@ class CuadernoProvider extends ChangeNotifier {
       final tieneDatosSuficientes =
           asistenciasRango.isNotEmpty || evidenciasRango.isNotEmpty;
 
-      // Calcular porcentajes (100% si no hay datos para no penalizar)
+      // Calcular porcentajes (0% si no hay datos registrados)
       final porcentajeAsist = asistenciasRango.isEmpty
-          ? 100.0
+          ? 0.0
           : AnalyticsUtils.porcentajeAsistencia(asistenciasRango);
 
       // Contar evidencias entregadas (cualquier estado diferente a "asignado")
@@ -1350,10 +1501,38 @@ class CuadernoProvider extends ChangeNotifier {
           .length;
       final total = evidenciasRango.isEmpty ? 1 : evidenciasRango.length;
       final porcentajeEvid = evidenciasRango.isEmpty
-          ? 100.0
+          ? 0.0
           : AnalyticsUtils.porcentajeEvidencias(
               entregadas: entregadas,
               esperadas: total,
+            );
+
+      // Calcular porcentaje de portafolios entregados
+      final portafoliosRango = evidenciasRango
+          .where((e) => e.tipo == TipoEvidencia.portafolio)
+          .toList();
+      final portafoliosEntregados = portafoliosRango
+          .where((e) => e.estado != EstadoEvidencia.asignado)
+          .length;
+      final porcentajePortafolio = portafoliosRango.isEmpty
+          ? 0.0
+          : AnalyticsUtils.porcentajeEvidencias(
+              entregadas: portafoliosEntregados,
+              esperadas: portafoliosRango.length,
+            );
+
+      // Calcular porcentaje de actividades entregadas
+      final actividadesRango = evidenciasRango
+          .where((e) => e.tipo == TipoEvidencia.actividad)
+          .toList();
+      final actividadesEntregadas = actividadesRango
+          .where((e) => e.estado != EstadoEvidencia.asignado)
+          .length;
+      final porcentajeActividades = actividadesRango.isEmpty
+          ? 0.0
+          : AnalyticsUtils.porcentajeEvidencias(
+              entregadas: actividadesEntregadas,
+              esperadas: actividadesRango.length,
             );
 
       final califs = _calificaciones
@@ -1378,10 +1557,13 @@ class CuadernoProvider extends ChangeNotifier {
         porcentajeEvidencias: porcentajeEvid,
       );
 
-      final puedeExent = AnalyticsUtils.puedeExentar(
-        porcentajeAsistencia: porcentajeAsist,
-        porcentajeEvidencias: porcentajeEvid,
-      );
+      // Solo puede exentar si tiene datos suficientes y cumple los criterios
+      final puedeExent =
+          tieneDatosSuficientes &&
+          AnalyticsUtils.puedeExentar(
+            porcentajeAsistencia: porcentajeAsist,
+            porcentajeEvidencias: porcentajeEvid,
+          );
 
       final requiereOrd = evaluacionesReprobadas >= 2;
 
@@ -1455,12 +1637,27 @@ class CuadernoProvider extends ChangeNotifier {
         }
       }
 
+      // Calcular porcentaje promedio de evaluaciones realizadas
+      // (promedio de las evaluaciones que tienen calificación * 10 = porcentaje)
+      double? porcentajePromedioEvaluaciones;
+      if (evidenciasCalificadas.isNotEmpty) {
+        final sumaTodas = evidenciasCalificadas.fold<double>(
+          0.0,
+          (prev, ev) => prev + ev.valorNumerico,
+        );
+        final promedioGeneral = sumaTodas / evidenciasCalificadas.length;
+        porcentajePromedioEvaluaciones =
+            promedioGeneral * 10.0; // Convertir a porcentaje
+      }
+
       estadisticas.add(
         EstadisticaAlumno(
           alumnoId: alumno.id,
           alumnoNombre: alumno.nombreCompleto,
           porcentajeAsistencia: porcentajeAsist,
           porcentajeEvidencias: porcentajeEvid,
+          porcentajePortafolio: porcentajePortafolio,
+          porcentajeActividades: porcentajeActividades,
           evaluacionesReprobadas: evaluacionesReprobadas,
           tieneRiesgo: tieneRiesgo,
           puedeExentar: puedeExent,
@@ -1470,6 +1667,7 @@ class CuadernoProvider extends ChangeNotifier {
           promedioExamen: promedioExamen,
           promedioPortafolio: promedioPortafolio,
           promedioActividad: promedioActividad,
+          porcentajePromedioEvaluaciones: porcentajePromedioEvaluaciones,
         ),
       );
     }

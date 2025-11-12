@@ -204,7 +204,7 @@ class _ReportesWebScreenState extends State<ReportesWebScreen> {
                                 child: DropdownButtonFormField<int?>(
                                   initialValue: _evaluacionSeleccionada,
                                   decoration: const InputDecoration(
-                                    labelText: 'Evaluación',
+                                    labelText: 'Examen',
                                     border: OutlineInputBorder(),
                                   ),
                                   items: const [
@@ -214,15 +214,15 @@ class _ReportesWebScreenState extends State<ReportesWebScreen> {
                                     ),
                                     DropdownMenuItem(
                                       value: 1,
-                                      child: Text('1era Evaluación'),
+                                      child: Text('1er Examen'),
                                     ),
                                     DropdownMenuItem(
                                       value: 2,
-                                      child: Text('2da Evaluación'),
+                                      child: Text('2do Examen'),
                                     ),
                                     DropdownMenuItem(
                                       value: 3,
-                                      child: Text('3era Evaluación'),
+                                      child: Text('3er Examen'),
                                     ),
                                   ],
                                   onChanged: (val) {
@@ -300,51 +300,51 @@ class _ReportesWebScreenState extends State<ReportesWebScreen> {
               style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 16),
-            Row(
+            Wrap(
+              spacing: 16,
+              runSpacing: 16,
               children: [
-                Expanded(
-                  child: _buildKPI(
-                    'Asistencia Promedio',
-                    '${reporte.promedioAsistenciaGrupo.toStringAsFixed(1)}%',
-                    Icons.person_outline,
-                    Colors.blue,
-                  ),
+                _buildKPI(
+                  'Asistencia Promedio',
+                  '${reporte.promedioAsistenciaGrupo.toStringAsFixed(1)}%',
+                  Icons.person_outline,
+                  Colors.blue,
                 ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: _buildKPI(
-                    'Evidencias Promedio',
-                    '${reporte.promedioEvidenciasGrupo.toStringAsFixed(1)}%',
-                    Icons.assignment,
-                    Colors.green,
-                  ),
+                _buildKPI(
+                  'Examen Promedio',
+                  '${reporte.promedioExamenesGrupo.toStringAsFixed(1)}%',
+                  Icons.quiz,
+                  Colors.orange,
                 ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: _buildKPI(
-                    'Alumnos en Riesgo',
-                    '${reporte.alumnosEnRiesgo}',
-                    Icons.warning,
-                    Colors.orange,
-                  ),
+                _buildKPI(
+                  'Portafolio Promedio',
+                  '${reporte.promedioPortafolioGrupo.toStringAsFixed(1)}%',
+                  Icons.folder,
+                  Colors.teal,
                 ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: _buildKPI(
-                    'Alumnos Exentos',
-                    '${reporte.alumnosExentos}',
-                    Icons.star,
-                    Colors.amber,
-                  ),
+                _buildKPI(
+                  'Actividades Promedio',
+                  '${reporte.promedioActividadesGrupo.toStringAsFixed(1)}%',
+                  Icons.checklist,
+                  Colors.cyan,
                 ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: _buildKPI(
-                    'Requieren Ordinaria',
-                    '${reporte.alumnosConOrdinaria}',
-                    Icons.school,
-                    Colors.purple,
-                  ),
+                _buildKPI(
+                  'Alumnos en Riesgo',
+                  '${reporte.alumnosEnRiesgo}',
+                  Icons.warning,
+                  Colors.orange,
+                ),
+                _buildKPI(
+                  'Alumnos Exentos',
+                  '${reporte.alumnosExentos}',
+                  Icons.star,
+                  Colors.amber,
+                ),
+                _buildKPI(
+                  'Requieren Ordinaria',
+                  '${reporte.alumnosConOrdinaria}',
+                  Icons.school,
+                  Colors.purple,
                 ),
               ],
             ),
@@ -355,36 +355,39 @@ class _ReportesWebScreenState extends State<ReportesWebScreen> {
   }
 
   Widget _buildKPI(String titulo, String valor, IconData icono, Color color) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withValues(alpha: 0.3)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(icono, color: color, size: 28),
-          const SizedBox(height: 8),
-          Text(
-            titulo,
-            style: TextStyle(
-              fontSize: 12,
-              color: Colors.grey[700],
-              fontWeight: FontWeight.w500,
+    return SizedBox(
+      width: 180,
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: color.withValues(alpha: 0.3)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(icono, color: color, size: 28),
+            const SizedBox(height: 8),
+            Text(
+              titulo,
+              style: TextStyle(
+                fontSize: 12,
+                color: Colors.grey[700],
+                fontWeight: FontWeight.w500,
+              ),
             ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            valor,
-            style: TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-              color: color,
+            const SizedBox(height: 4),
+            Text(
+              valor,
+              style: TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+                color: color,
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -421,13 +424,25 @@ class _ReportesWebScreenState extends State<ReportesWebScreen> {
                   ),
                   DataColumn(
                     label: Text(
+                      'Promedio\nExámenes',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                  DataColumn(
+                    label: Text(
                       'Asistencia',
                       style: TextStyle(fontWeight: FontWeight.bold),
                     ),
                   ),
                   DataColumn(
                     label: Text(
-                      'Evidencias',
+                      'Portafolio',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                  DataColumn(
+                    label: Text(
+                      'Actividades',
                       style: TextStyle(fontWeight: FontWeight.bold),
                     ),
                   ),
@@ -466,6 +481,22 @@ class _ReportesWebScreenState extends State<ReportesWebScreen> {
                       ),
                       DataCell(
                         Text(
+                          alumno.porcentajePromedioEvaluaciones != null
+                              ? '${alumno.porcentajePromedioEvaluaciones!.toStringAsFixed(1)}%'
+                              : 'N/A',
+                          style: TextStyle(
+                            color: alumno.porcentajePromedioEvaluaciones != null
+                                ? (alumno.porcentajePromedioEvaluaciones! >= 60
+                                      ? Colors.green
+                                      : Colors.orange)
+                                : Colors.grey,
+                            fontWeight: FontWeight.w500,
+                            fontSize: 14,
+                          ),
+                        ),
+                      ),
+                      DataCell(
+                        Text(
                           '${alumno.porcentajeAsistencia.toStringAsFixed(1)}%',
                           style: TextStyle(
                             color: alumno.porcentajeAsistencia < 80
@@ -477,9 +508,20 @@ class _ReportesWebScreenState extends State<ReportesWebScreen> {
                       ),
                       DataCell(
                         Text(
-                          '${alumno.porcentajeEvidencias.toStringAsFixed(1)}%',
+                          '${alumno.porcentajePortafolio.toStringAsFixed(1)}%',
                           style: TextStyle(
-                            color: alumno.porcentajeEvidencias < 50
+                            color: alumno.porcentajePortafolio < 50
+                                ? Colors.red
+                                : Colors.green,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                      DataCell(
+                        Text(
+                          '${alumno.porcentajeActividades.toStringAsFixed(1)}%',
+                          style: TextStyle(
+                            color: alumno.porcentajeActividades < 50
                                 ? Colors.red
                                 : Colors.green,
                             fontWeight: FontWeight.w500,
@@ -643,9 +685,25 @@ class _ReportesWebScreenState extends State<ReportesWebScreen> {
                               getTitlesWidget: (value, meta) {
                                 switch (value.toInt()) {
                                   case 0:
-                                    return const Text('Asistencia');
+                                    return const Text(
+                                      'Asistencia',
+                                      style: TextStyle(fontSize: 10),
+                                    );
                                   case 1:
-                                    return const Text('Evidencias');
+                                    return const Text(
+                                      'Examen',
+                                      style: TextStyle(fontSize: 10),
+                                    );
+                                  case 2:
+                                    return const Text(
+                                      'Portafolio',
+                                      style: TextStyle(fontSize: 10),
+                                    );
+                                  case 3:
+                                    return const Text(
+                                      'Actividades',
+                                      style: TextStyle(fontSize: 10),
+                                    );
                                   default:
                                     return const Text('');
                                 }
@@ -676,7 +734,7 @@ class _ReportesWebScreenState extends State<ReportesWebScreen> {
                               BarChartRodData(
                                 toY: reporte.promedioAsistenciaGrupo,
                                 color: Colors.blue,
-                                width: 50,
+                                width: 40,
                                 borderRadius: const BorderRadius.only(
                                   topLeft: Radius.circular(6),
                                   topRight: Radius.circular(6),
@@ -688,9 +746,37 @@ class _ReportesWebScreenState extends State<ReportesWebScreen> {
                             x: 1,
                             barRods: [
                               BarChartRodData(
-                                toY: reporte.promedioEvidenciasGrupo,
-                                color: Colors.green,
-                                width: 50,
+                                toY: reporte.promedioExamenesGrupo,
+                                color: Colors.orange,
+                                width: 40,
+                                borderRadius: const BorderRadius.only(
+                                  topLeft: Radius.circular(6),
+                                  topRight: Radius.circular(6),
+                                ),
+                              ),
+                            ],
+                          ),
+                          BarChartGroupData(
+                            x: 2,
+                            barRods: [
+                              BarChartRodData(
+                                toY: reporte.promedioPortafolioGrupo,
+                                color: Colors.teal,
+                                width: 40,
+                                borderRadius: const BorderRadius.only(
+                                  topLeft: Radius.circular(6),
+                                  topRight: Radius.circular(6),
+                                ),
+                              ),
+                            ],
+                          ),
+                          BarChartGroupData(
+                            x: 3,
+                            barRods: [
+                              BarChartRodData(
+                                toY: reporte.promedioActividadesGrupo,
+                                color: Colors.cyan,
+                                width: 40,
                                 borderRadius: const BorderRadius.only(
                                   topLeft: Radius.circular(6),
                                   topRight: Radius.circular(6),
@@ -1107,8 +1193,10 @@ class _ReportesWebScreenState extends State<ReportesWebScreen> {
               headers: const [
                 'Alumno',
                 'Cal. Final',
-                'Asistencia',
-                'Evidencias',
+                'Prom. Exám.',
+                'Asist.',
+                'Portaf.',
+                'Activ.',
                 'Eval. Rep.',
                 'Estado',
               ],
@@ -1119,8 +1207,12 @@ class _ReportesWebScreenState extends State<ReportesWebScreen> {
                     alumno.calificacionFinal != null
                         ? alumno.calificacionFinal!.toStringAsFixed(1)
                         : 'N/A',
+                    alumno.porcentajePromedioEvaluaciones != null
+                        ? '${alumno.porcentajePromedioEvaluaciones!.toStringAsFixed(1)}%'
+                        : 'N/A',
                     '${alumno.porcentajeAsistencia.toStringAsFixed(1)}%',
-                    '${alumno.porcentajeEvidencias.toStringAsFixed(1)}%',
+                    '${alumno.porcentajePortafolio.toStringAsFixed(1)}%',
+                    '${alumno.porcentajeActividades.toStringAsFixed(1)}%',
                     '${alumno.evaluacionesReprobadas}/3',
                     alumno.estadoGeneral,
                   ],
@@ -1130,18 +1222,20 @@ class _ReportesWebScreenState extends State<ReportesWebScreen> {
                 fontWeight: pw.FontWeight.bold,
               ),
               headerDecoration: pw.BoxDecoration(color: baseColor),
-              cellStyle: const pw.TextStyle(fontSize: 10),
+              cellStyle: const pw.TextStyle(fontSize: 8),
               cellAlignment: pw.Alignment.centerLeft,
               headerAlignment: pw.Alignment.centerLeft,
               oddRowDecoration: pw.BoxDecoration(color: lightFill),
               border: null,
               columnWidths: {
-                0: const pw.FlexColumnWidth(2.2),
-                1: const pw.FlexColumnWidth(1),
-                2: const pw.FlexColumnWidth(1),
-                3: const pw.FlexColumnWidth(1),
-                4: const pw.FlexColumnWidth(1),
-                5: const pw.FlexColumnWidth(1.2),
+                0: const pw.FlexColumnWidth(2),
+                1: const pw.FlexColumnWidth(0.8),
+                2: const pw.FlexColumnWidth(0.8),
+                3: const pw.FlexColumnWidth(0.7),
+                4: const pw.FlexColumnWidth(0.7),
+                5: const pw.FlexColumnWidth(0.7),
+                6: const pw.FlexColumnWidth(0.8),
+                7: const pw.FlexColumnWidth(0.9),
               },
             ),
           ];
@@ -1204,8 +1298,10 @@ class _ReportesWebScreenState extends State<ReportesWebScreen> {
     rows.add([
       'Alumno',
       'Calificación Final',
+      'Promedio Exámenes (%)',
       'Asistencia (%)',
-      'Evidencias (%)',
+      'Portafolio (%)',
+      'Actividades (%)',
       'Evaluaciones Reprobadas',
       'Estado',
     ]);
@@ -1217,8 +1313,12 @@ class _ReportesWebScreenState extends State<ReportesWebScreen> {
         alumno.calificacionFinal != null
             ? alumno.calificacionFinal!.toStringAsFixed(1)
             : 'N/A',
+        alumno.porcentajePromedioEvaluaciones != null
+            ? alumno.porcentajePromedioEvaluaciones!.toStringAsFixed(1)
+            : 'N/A',
         alumno.porcentajeAsistencia.toStringAsFixed(1),
-        alumno.porcentajeEvidencias.toStringAsFixed(1),
+        alumno.porcentajePortafolio.toStringAsFixed(1),
+        alumno.porcentajeActividades.toStringAsFixed(1),
         '${alumno.evaluacionesReprobadas}/3',
         alumno.estadoGeneral,
       ]);

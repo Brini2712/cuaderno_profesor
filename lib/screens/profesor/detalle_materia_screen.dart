@@ -189,15 +189,23 @@ class _EstadisticasTab extends StatelessWidget {
       return const Center(child: Text('Sin alumnos para estadísticas'));
     }
     double acumAsistencia = 0;
-    double acumEvidencias = 0;
+    double acumExamenes = 0;
+    double acumPortafolio = 0;
+    double acumActividades = 0;
     for (final a in alumnos) {
       final pa = provider.calcularPorcentajeAsistencia(a.id, materia.id);
-      final pe = provider.calcularPorcentajeEvidencias(a.id, materia.id);
+      final pex = provider.calcularPorcentajeExamenes(a.id, materia.id);
+      final pp = provider.calcularPorcentajePortafolio(a.id, materia.id);
+      final pac = provider.calcularPorcentajeActividades(a.id, materia.id);
       acumAsistencia += pa;
-      acumEvidencias += pe;
+      acumExamenes += pex;
+      acumPortafolio += pp;
+      acumActividades += pac;
     }
     final promA = acumAsistencia / alumnos.length;
-    final promE = acumEvidencias / alumnos.length;
+    final promEx = acumExamenes / alumnos.length;
+    final promP = acumPortafolio / alumnos.length;
+    final promAc = acumActividades / alumnos.length;
 
     // Obtener listas de alumnos con riesgo y exento
     final alumnosConRiesgo = alumnos
@@ -210,8 +218,10 @@ class _EstadisticasTab extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
-        _stat('Promedio asistencia', '${promA.toStringAsFixed(1)}%'),
-        _stat('Promedio evidencias', '${promE.toStringAsFixed(1)}%'),
+        _stat('% Asistencia', '${promA.toStringAsFixed(1)}%'),
+        _stat('% Entrega examen', '${promEx.toStringAsFixed(1)}%'),
+        _stat('% Entrega portafolio', '${promP.toStringAsFixed(1)}%'),
+        _stat('% Entrega actividad', '${promAc.toStringAsFixed(1)}%'),
         const SizedBox(height: 8),
 
         // Alumnos con riesgo de reprobación
@@ -244,6 +254,11 @@ class _EstadisticasTab extends StatelessWidget {
                         alumno.id,
                         materia.id,
                       );
+                      final promedioEval = provider
+                          .calcularPorcentajePromedioEvaluaciones(
+                            alumno.id,
+                            materia.id,
+                          );
                       return ListTile(
                         leading: CircleAvatar(
                           backgroundColor: Colors.red.shade200,
@@ -254,7 +269,8 @@ class _EstadisticasTab extends StatelessWidget {
                         title: Text(alumno.nombreCompleto),
                         subtitle: Text(
                           'Asistencia: ${asistencia.toStringAsFixed(1)}% • '
-                          'Evidencias: ${evidencias.toStringAsFixed(1)}%',
+                          'Evidencias: ${evidencias.toStringAsFixed(1)}%'
+                          '${promedioEval != null ? ' • Exámenes: ${promedioEval.toStringAsFixed(1)}%' : ''}',
                         ),
                       );
                     }).toList(),
@@ -294,6 +310,11 @@ class _EstadisticasTab extends StatelessWidget {
                         alumno.id,
                         materia.id,
                       );
+                      final promedioEval = provider
+                          .calcularPorcentajePromedioEvaluaciones(
+                            alumno.id,
+                            materia.id,
+                          );
                       return ListTile(
                         leading: CircleAvatar(
                           backgroundColor: Colors.green.shade200,
@@ -304,7 +325,8 @@ class _EstadisticasTab extends StatelessWidget {
                         title: Text(alumno.nombreCompleto),
                         subtitle: Text(
                           'Asistencia: ${asistencia.toStringAsFixed(1)}% • '
-                          'Evidencias: ${evidencias.toStringAsFixed(1)}%',
+                          'Evidencias: ${evidencias.toStringAsFixed(1)}%'
+                          '${promedioEval != null ? ' • Exámenes: ${promedioEval.toStringAsFixed(1)}%' : ''}',
                         ),
                       );
                     }).toList(),

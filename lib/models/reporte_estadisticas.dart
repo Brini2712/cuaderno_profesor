@@ -14,23 +14,65 @@ class ReporteEstadisticas {
     required this.estadisticasAlumnos,
   });
 
-  // Promedios globales del grupo
+  // Promedios globales del grupo (solo alumnos con datos suficientes)
   double get promedioAsistenciaGrupo {
-    if (estadisticasAlumnos.isEmpty) return 0.0;
-    final suma = estadisticasAlumnos.fold(
+    final alumnosConDatos = estadisticasAlumnos
+        .where((a) => a.tieneDatosSuficientes)
+        .toList();
+    if (alumnosConDatos.isEmpty) return 0.0;
+    final suma = alumnosConDatos.fold(
       0.0,
       (prev, e) => prev + e.porcentajeAsistencia,
     );
-    return suma / estadisticasAlumnos.length;
+    return suma / alumnosConDatos.length;
   }
 
   double get promedioEvidenciasGrupo {
-    if (estadisticasAlumnos.isEmpty) return 0.0;
-    final suma = estadisticasAlumnos.fold(
+    final alumnosConDatos = estadisticasAlumnos
+        .where((a) => a.tieneDatosSuficientes)
+        .toList();
+    if (alumnosConDatos.isEmpty) return 0.0;
+    final suma = alumnosConDatos.fold(
       0.0,
       (prev, e) => prev + e.porcentajeEvidencias,
     );
-    return suma / estadisticasAlumnos.length;
+    return suma / alumnosConDatos.length;
+  }
+
+  double get promedioPortafolioGrupo {
+    final alumnosConDatos = estadisticasAlumnos
+        .where((a) => a.tieneDatosSuficientes)
+        .toList();
+    if (alumnosConDatos.isEmpty) return 0.0;
+    final suma = alumnosConDatos.fold(
+      0.0,
+      (prev, e) => prev + e.porcentajePortafolio,
+    );
+    return suma / alumnosConDatos.length;
+  }
+
+  double get promedioActividadesGrupo {
+    final alumnosConDatos = estadisticasAlumnos
+        .where((a) => a.tieneDatosSuficientes)
+        .toList();
+    if (alumnosConDatos.isEmpty) return 0.0;
+    final suma = alumnosConDatos.fold(
+      0.0,
+      (prev, e) => prev + e.porcentajeActividades,
+    );
+    return suma / alumnosConDatos.length;
+  }
+
+  double get promedioExamenesGrupo {
+    final alumnosConDatos = estadisticasAlumnos
+        .where((a) => a.porcentajePromedioEvaluaciones != null)
+        .toList();
+    if (alumnosConDatos.isEmpty) return 0.0;
+    final suma = alumnosConDatos.fold(
+      0.0,
+      (prev, e) => prev + (e.porcentajePromedioEvaluaciones ?? 0.0),
+    );
+    return suma / alumnosConDatos.length;
   }
 
   int get alumnosEnRiesgo =>
@@ -60,6 +102,8 @@ class EstadisticaAlumno {
   final String alumnoNombre;
   final double porcentajeAsistencia;
   final double porcentajeEvidencias;
+  final double porcentajePortafolio; // % de portafolios entregados
+  final double porcentajeActividades; // % de actividades entregadas
   final int
   evaluacionesReprobadas; // Cuántas de las 3 evaluaciones ha reprobado
   final bool tieneRiesgo;
@@ -75,12 +119,16 @@ class EstadisticaAlumno {
   final double? promedioPortafolio; // Promedio de portafolios (40%)
   final double?
   promedioActividad; // Promedio de actividades complementarias (20%)
+  final double?
+  porcentajePromedioEvaluaciones; // Promedio general de evaluaciones en porcentaje (0-100)
 
   EstadisticaAlumno({
     required this.alumnoId,
     required this.alumnoNombre,
     required this.porcentajeAsistencia,
     required this.porcentajeEvidencias,
+    required this.porcentajePortafolio,
+    required this.porcentajeActividades,
     required this.evaluacionesReprobadas,
     required this.tieneRiesgo,
     required this.puedeExentar,
@@ -90,6 +138,7 @@ class EstadisticaAlumno {
     this.promedioExamen,
     this.promedioPortafolio,
     this.promedioActividad,
+    this.porcentajePromedioEvaluaciones,
   });
 
   String get estadoGeneral {

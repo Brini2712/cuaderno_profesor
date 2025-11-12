@@ -450,6 +450,7 @@ class _FormularioEvidenciaScreenState extends State<FormularioEvidenciaScreen> {
   late TextEditingController _observacionesCtrl;
   String? _alumnoSeleccionado;
   TipoEvidencia _tipo = TipoEvidencia.actividad;
+  EvaluacionPeriodo _periodo = EvaluacionPeriodo.eval1;
   EstadoEvidencia _estado = EstadoEvidencia.asignado;
   // Fecha por defecto: una semana a partir de hoy (editable por el usuario)
   DateTime _fechaEntrega = DateTime.now().add(const Duration(days: 7));
@@ -471,7 +472,19 @@ class _FormularioEvidenciaScreenState extends State<FormularioEvidenciaScreen> {
       _tipo = widget.evidencia!.tipo;
       _estado = widget.evidencia!.estado;
       _fechaEntrega = widget.evidencia!.fechaEntrega;
+      _periodo = widget.evidencia!.periodo;
+    } else {
+      // En creación, intentar inferir el periodo por la fecha de entrega
+      _periodo = _periodoPorFecha(_fechaEntrega);
     }
+  }
+
+  EvaluacionPeriodo _periodoPorFecha(DateTime fecha) {
+    final m = fecha.month;
+    if (m >= 1 && m <= 4) return EvaluacionPeriodo.eval1;
+    if (m >= 5 && m <= 8) return EvaluacionPeriodo.eval2;
+    if (m >= 9 && m <= 11) return EvaluacionPeriodo.eval3;
+    return EvaluacionPeriodo.ordinario;
   }
 
   @override
@@ -623,13 +636,50 @@ class _FormularioEvidenciaScreenState extends State<FormularioEvidenciaScreen> {
                       ),
                     )
                     .toList(),
-                onChanged: (v) => setState(() => _tipo = v!),
+                onChanged: (v) => setState(() {
+                  _tipo = v!;
+                  // Si se cambia a un tipo que no es examen, el periodo pierde relevancia
+                  if (_tipo != TipoEvidencia.examen) {
+                    _periodo = EvaluacionPeriodo.eval1; // valor por defecto
+                  }
+                }),
               ),
               contentPadding: const EdgeInsets.symmetric(
                 horizontal: 24,
                 vertical: 4,
               ),
             ),
+            // Evaluación / Periodo (solo aplica para tipo Examen)
+            if (_tipo == TipoEvidencia.examen)
+              ListTile(
+                leading: const Icon(Icons.event_note_outlined),
+                title: const Text('Evaluación'),
+                subtitle: widget.evidencia != null
+                    ? const Text(
+                        'No se puede cambiar el periodo de un examen ya creado',
+                        style: TextStyle(fontSize: 12),
+                      )
+                    : null,
+                trailing: DropdownButton<EvaluacionPeriodo>(
+                  value: _periodo,
+                  underline: const SizedBox(),
+                  items: EvaluacionPeriodo.values
+                      .map(
+                        (p) => DropdownMenuItem(
+                          value: p,
+                          child: Text(_labelPeriodo(p)),
+                        ),
+                      )
+                      .toList(),
+                  onChanged: widget.evidencia != null
+                      ? null
+                      : (v) => setState(() => _periodo = v!),
+                ),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 4,
+                ),
+              ),
 
             // Estado
             if (widget.evidencia != null)
@@ -713,6 +763,19 @@ class _FormularioEvidenciaScreenState extends State<FormularioEvidenciaScreen> {
     }
   }
 
+  String _labelPeriodo(EvaluacionPeriodo p) {
+    switch (p) {
+      case EvaluacionPeriodo.eval1:
+        return 'Examen 1';
+      case EvaluacionPeriodo.eval2:
+        return 'Examen 2';
+      case EvaluacionPeriodo.eval3:
+        return 'Examen 3';
+      case EvaluacionPeriodo.ordinario:
+        return 'Ordinario';
+    }
+  }
+
   String _labelEstado(EstadoEvidencia e) {
     switch (e) {
       case EstadoEvidencia.asignado:
@@ -740,8 +803,29 @@ class _FormularioEvidenciaScreenState extends State<FormularioEvidenciaScreen> {
       return;
     }
 
-    setState(() => _guardando = true);
+    // Si es creación y es un examen, validar que no exista otro examen del mismo periodo en la materia
     final provider = context.read<CuadernoProvider>();
+    if (widget.evidencia == null && _tipo == TipoEvidencia.examen) {
+      final duplicado = provider.evidencias.any(
+        (e) =>
+            e.materiaId == widget.materia.id &&
+            e.tipo == TipoEvidencia.examen &&
+            e.periodo == _periodo,
+      );
+      if (duplicado) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Ya existe un examen para ${_labelPeriodo(_periodo)} en esta materia. Edita el existente para calificar.',
+            ),
+            backgroundColor: Colors.orange,
+          ),
+        );
+        return;
+      }
+    }
+
+    setState(() => _guardando = true);
 
     final evidencia = Evidencia(
       id: widget.evidencia?.id ?? '',
@@ -751,6 +835,7 @@ class _FormularioEvidenciaScreenState extends State<FormularioEvidenciaScreen> {
       titulo: _tituloCtrl.text.trim(),
       descripcion: _descripcionCtrl.text.trim(),
       tipo: _tipo,
+      periodo: _periodo,
       estado: _estado,
       fechaEntrega: _fechaEntrega,
       fechaRegistro: widget.evidencia?.fechaRegistro ?? DateTime.now(),

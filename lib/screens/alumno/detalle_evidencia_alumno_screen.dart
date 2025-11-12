@@ -259,7 +259,7 @@ class _DetalleEvidenciaAlumnoScreenState
                     const SizedBox(height: 8),
                   ],
                   Text(
-                    '${widget.evidencia.calificacionNumerica!.toStringAsFixed(1)} / ${widget.evidencia.puntosTotales.toStringAsFixed(0)}',
+                    widget.evidencia.calificacionNumerica!.toStringAsFixed(1),
                     style: TextStyle(
                       fontSize: 22,
                       fontWeight: FontWeight.bold,
@@ -938,4 +938,3 @@ class _DetalleEvidenciaAlumnoScreenState
     );
   }
 }
-
